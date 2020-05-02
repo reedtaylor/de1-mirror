@@ -252,28 +252,30 @@ proc start_firmware_update {} {
 	set ::de1(firmware_bytes_uploaded) 0
 	set ::de1(firmware_update_size) [file size [fwfile]]
 
-# REED to JOHN: In bluetooth.tcl this code is gated by
+# REED to JOHN: In bluetooth.tcl the following code is gated by
 # 	if {$::android != 1} {
-# I am not confident I grasped the intent of this if statement as it bears on what I am interpreting
-# as a "delay, then execute with disabled characteristics" behavior.  
-# Here I am treating it as a "simulate the firmware update for a configuration that shouldn't
-# get a real update" But I can see that this may be more like a "prevent a race condition / 
-# unsafe operations from transpiring in the middle of an update", in which case I have it
-# totally wrong here.  Or something else.  Anyway definitely check my work.
-	if {[!de1_safe_for_firmware]} {
+# I am not confident I correctly grasped the intent of this if statement.
+# If the statement is true, it looks like we disable certain characteristics 
+# then (after a delay) asynchronously call write_firmware_now.
+# 
+# Here I am treating that as a call to "simulate the firmware update on a fake machine". 
+# But this code may be intended to do something more important like "prevent a race 
+# condition" or "prevent unsafe operations from happening in the middle of an update".
+#
+# Assuming I'm right, WHat I've done is dropped the part where I zero out the charactieristics.
+# because -- well if it's not a real BLE machine, we won't use cuuids for anything... and
+# if it *is* a real BLE machine ... then the zeroing behavior isn't supposed to happen (I don't think).
+#
+# But, if my interpretation was wrong, we might lose an important safety check.
+# So anyway, this is one spot to *definitely* check my work.
+	if {[!de1_real_machine_connected]} {
 		after 100 write_firmware_now
-# TODO(REED) the following comment is hard to understand, fix
-#### REED COMMENTED OUT THE FOLLOWING BLE SPECIFIC "DISABLINGS" AND DID NOT 
-#### RECREATE THEM ON THE bluetooth.tcl SIDE.  YIKES, WAS THAT RIGHT?  DOES IT MATTER?
-####
-#### (If it is important to recreate these, then we should probably have per-connectivity-type
-####  logic here (meaning, "if {$::connectivity == BLE } {...} else if {$::connectivity == TCP} {...}  )
-#### so as to achieve this "disabling" behavior in a manner that doesn't rely on zeroing out the 
-#### characteristic uuids (as there's no direct analog to doing that, outside BLE)
-#		set ::sinstance($::de1(suuid))
-#		set ::de1(cuuid_09) 0
-#		set ::de1(cuuid_06) 0
-#		set ::cinstance($::de1(cuuid_09)) 0
+		# bluetooth.tcl zeroed these BLE specific concepts out.  Not doing that here since "zeroing out a
+		# characteristic" is not an action that has a clear analog in TCP, USB etc.
+		# set ::sinstance($::de1(suuid))
+		# set ::de1(cuuid_09) 0
+		# set ::de1(cuuid_06) 0
+		# set ::cinstance($::de1(cuuid_09)) 0
 	}
 
 	set arr(WindowIncrement) 0
