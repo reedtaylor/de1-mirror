@@ -15,7 +15,7 @@ proc de1_real_machine {} {
 		return true
 	} 
 
-	# "mock" machine or any other (unexpected) fallthrough value
+	# "simulated" machine or any other (unexpected) fallthrough value
 	return false
 }
 
@@ -305,8 +305,8 @@ proc write_firmware_now {} {
 
 proc firmware_upload_next {} {
 	
-	if {$::connectivity=="mock"} {
-		msg "firmware_upload_next connected to 'mock' machine; updating button text (only)"
+	if {$::connectivity=="simulated"} {
+		msg "firmware_upload_next connected to 'simulated' machine; updating button text (only)"
 	} elseif {[de1_real_machine_connected] && [de1_safe_for_firmware]} {
 		msg "firmware_upload_next $::de1(firmware_bytes_uploaded)"
 	} else {
@@ -320,7 +320,7 @@ proc firmware_upload_next {} {
 		set ::settings(firmware_crc) [crc::crc32 -filename [fwfile]]
 		save_settings
 
-		if {$::connectivity == "mock"} {
+		if {$::connectivity == "simulated"} {
 			set ::de1(firmware_update_button_label) "Updated"
 			
 		} else {
@@ -348,7 +348,7 @@ proc firmware_upload_next {} {
 		set data "\x10[make_U24P0 $::de1(firmware_bytes_uploaded)][string range $::de1(firmware_update_binary) $::de1(firmware_bytes_uploaded) [expr {15 + $::de1(firmware_bytes_uploaded)}]]"
 		userdata_append "Write [string length $data] bytes of firmware data ([convert_string_to_hex $data])" [list de1_comm write WriteToMMR $data]
 		set ::de1(firmware_bytes_uploaded) [expr {$::de1(firmware_bytes_uploaded) + 16}]
-		if {$::connectivity != "mock"} {
+		if {$::connectivity != "simulated"} {
 			after 1 firmware_upload_next
 		}
 	}
@@ -366,7 +366,7 @@ proc mmr_read {address length} {
 	set mmrloc [binary decode hex $address]
 	set data "$mmrlen${mmrloc}[binary decode hex 00000000000000000000000000000000]"
 	
-	if {$::connectivity == "mock"} {
+	if {$::connectivity == "simulated"} {
 		msg "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc]: with comment [convert_string_to_hex $data]"
 		return
 	}
@@ -390,7 +390,7 @@ proc mmr_write { address length value} {
  	set mmrval [binary decode hex $value]	
 	set data "$mmrlen${mmrloc}${mmrval}[binary decode hex 000000000000000000000000000000]"
 	
-	if {$::connectivity ==  "mock"} {
+	if {$::connectivity ==  "simulated"} {
 		msg "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]"
 		return
 	}
@@ -591,7 +591,7 @@ proc close_all_comms_and_exit {} {
 proc app_exit {} {
 	close_log_file
 
-	if {$::connectivity == "mock"} {
+	if {$::connectivity == "simulated"} {
 		close_all_comms_and_exit
 	}
 
@@ -872,7 +872,7 @@ proc connect_to_de1 {} {
 
 	if {$::connectivity == "BLE"} {
 		return [ble_connect_to_de1]
-	} elseif {$::connectivity == "mock"} {
+	} elseif {$::connectivity == "simulated"} {
 		msg "simulated DE1 connection"
 	    set ::de1(connect_time) [clock seconds]
 	    set ::de1(last_ping) [clock seconds]

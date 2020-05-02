@@ -2464,7 +2464,7 @@ proc scanning_restart {} {
 	if {$::scanning == 1} {
 		return
 	}
-	if {$::connectivity == "mock"} {
+	if {$::connectivity == "simulated"} {
 
 		set ::scale_bluetooth_list [list "12:32:56:78:90" "32:56:78:90:12" "56:78:90:12:32"]
 		set ::de1_bluetooth_list [list "12:32:56:18:90" "32:56:78:90:13" "56:78:90:13:32"]

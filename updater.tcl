@@ -8,7 +8,7 @@ package provide de1_updater 1.0
 proc determine_if_android {} {
 
     set ::runtime "default"
-    set ::connectivity "mock"
+    set ::connectivity "simulated"
     set ::some_droid 0
 
 
