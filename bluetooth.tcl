@@ -652,7 +652,6 @@ proc firmware_upload_next_DEPRECATED_BY_COMMS {} {
 		msg "DE1 not connected, cannot send BLE command 11"
 		return
 	}
-}
 
 	#delay_screen_saver
 
