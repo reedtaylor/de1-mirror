@@ -18,7 +18,7 @@ proc read_de1_version_DEPRECATED_BY_COMMS {} {
 	}
 }
 
-## repeatedly request de1 state
+# repeatedly request de1 state
 proc poll_de1_state_DEPRECATED_BY_COMMS {} {
 
 	msg "poll_de1_state"
@@ -471,7 +471,6 @@ proc de1_enable_temp_notifications_DEPRECATED_BY_COMMS {} {
 		return
 	}
 
-	# REED to JOHN: Prouction code has 0D (I did not change it.) but 0D looks like ShotSample not Temperatures
 	userdata_append "enable de1 temp notifications" [list ble enable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0D) $::cinstance($::de1(cuuid_0D))]
 }
 
@@ -514,6 +513,7 @@ proc mmr_available_DEPRECATED_BY_COMMS {} {
 		}
 	}
 	return $::de1(mmr_enabled)
+}
 
 
 proc de1_enable_mmr_notifications_DEPRECATED_BY_COMMS {} {
@@ -558,9 +558,10 @@ proc de1_enable_maprequest_notifications_DEPRECATED_BY_COMMS {} {
 		return
 	}
 
-	# REED to JOHN: "enable de1 state notifications" is the comment param, this loosk like a 
-	# (probably harmless) copy-paste bug; should be "enable de1 maprequest notifications"
-   # I applied this correction in the de1_comms.tcl version
+# REED to JOHN: the comment param says "enable de1 state notifications"
+# this looks like a (probably harmless) copy-paste bug.  
+# Should be "enable de1 maprequest notifications" within this function, right?
+# (Note, I applied this correction in the not-deprecated de1_comms.tcl version)
 	userdata_append "enable de1 state notifications" [list ble enable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_09) $::cinstance($::de1(cuuid_09))]
 }
 
@@ -580,8 +581,8 @@ proc fwfile_DEPRECATED_BY_COMMS {} {
 
 
 proc start_firmware_update_DEPRECATED_BY_COMMS {} {
-	if {$::connectivity == "BLE"} {
-		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+		if {$::android == 1} {			
 			msg "DE1 not connected, cannot send BLE command 10"
 			return
 		}
@@ -607,7 +608,7 @@ proc start_firmware_update_DEPRECATED_BY_COMMS {} {
 	set ::de1(firmware_bytes_uploaded) 0
 	set ::de1(firmware_update_size) [file size [fwfile]]
 
-	if {$::connectivity != "BLE"} {
+	if {$::android != 1} {
 		after 100 write_firmware_now
 		set ::sinstance($::de1(suuid)) 0
 		set ::de1(cuuid_09) 0
@@ -644,16 +645,15 @@ proc write_firmware_now_DEPRECATED_BY_COMMS {} {
 
 proc firmware_upload_next_DEPRECATED_BY_COMMS {} {
 	
-	if {$::connectivity != "mock"} {
+	if {$::android == 1} {
 		msg "firmware_upload_next $::de1(firmware_bytes_uploaded)"
 	}
 
-	if {$::connectivity == "BLE"} {
-		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-			msg "DE1 not connected, cannot send BLE command 11"
-			return
-		}
+	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+		msg "DE1 not connected, cannot send BLE command 11"
+		return
 	}
+}
 
 	#delay_screen_saver
 
@@ -661,7 +661,7 @@ proc firmware_upload_next_DEPRECATED_BY_COMMS {} {
 		set ::settings(firmware_crc) [crc::crc32 -filename [fwfile]]
 		save_settings
 
-		if {$::connectivity == "mock"} {
+		if {$::android != 1} {
 			set ::de1(firmware_update_button_label) "Updated"
 			
 		} else {
@@ -689,7 +689,7 @@ proc firmware_upload_next_DEPRECATED_BY_COMMS {} {
 		set data "\x10[make_U24P0 $::de1(firmware_bytes_uploaded)][string range $::de1(firmware_update_binary) $::de1(firmware_bytes_uploaded) [expr {15 + $::de1(firmware_bytes_uploaded)}]]"
 		userdata_append "Write [string length $data] bytes of firmware data ([convert_string_to_hex $data])" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_06) $::cinstance($::de1(cuuid_06)) $data]
 		set ::de1(firmware_bytes_uploaded) [expr {$::de1(firmware_bytes_uploaded) + 16}]
-		if {$::connectivity != "mock"} {
+		if {$::android != 1} {
 			after 1 firmware_upload_next
 		}
 	}
@@ -707,16 +707,13 @@ proc mmr_read_DEPRECATED_BY_COMMS {address length} {
 	set mmrloc [binary decode hex $address]
 	set data "$mmrlen${mmrloc}[binary decode hex 00000000000000000000000000000000]"
 	
-	if {$::connectivity == "mock"} {
+	if {$::android != 1} {
 		msg "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc]: with comment [convert_string_to_hex $data]"
-		return
 	}
 
-	if {$::connectivity == "BLE"} {
-		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-			msg "DE1 not connected, cannot send BLE command 11"
-			return
-		}
+	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+		msg "DE1 not connected, cannot send BLE command 11"
+		return
 	}
 
 	userdata_append "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc] with '[convert_string_to_hex $data]'" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_05) $::cinstance($::de1(cuuid_05)) $data]
@@ -734,16 +731,13 @@ proc mmr_write_DEPRECATED_BY_COMMS { address length value} {
  	set mmrval [binary decode hex $value]	
 	set data "$mmrlen${mmrloc}${mmrval}[binary decode hex 000000000000000000000000000000]"
 	
-	if {$::connectivity ==  "mock"} {
+	if {$::android != 1} {
 		msg "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]"
-		return
 	}
 
-	if {$::connectivity == "BLE"} {
-		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-			msg "DE1 not connected, cannot send BLE command 11"
-			return
-		}
+	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+		msg "DE1 not connected, cannot send BLE command 11"
+		return
 	}
 	userdata_append "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_06) $::cinstance($::de1(cuuid_06)) $data]
 }
@@ -863,8 +857,8 @@ proc de1_send_waterlevel_settings_DEPRECATED_BY_COMMS {} {
 
 
 proc run_next_userdata_cmd_DEPRECATED_BY_COMMS {} {
-	if {$::connectivity == "BLE"} {
-		# if communicating over BLE, only write one command at a time
+	if {$::android == 1} {
+		# if running on android, only write one BLE command at a time
 		if {$::de1(wrote) == 1} {
 			#msg "Do no write, already writing to DE1"
 			return
@@ -964,7 +958,7 @@ proc close_all_ble_and_exit {} {
 proc app_exit_DEPRECATED_BY_COMMS {} {
 	close_log_file
 
-	if {$::connectivity == "mock"} {
+	if {$::android != 1} {
 		close_all_ble_and_exit
 	}
 
@@ -1245,7 +1239,7 @@ proc remove_null_terminator_DEPRECATED_BY_COMMS {instr} {
 # It seems like maybe it should even more naturally move into utils.tcl.  Just a thought.
 proc android_8_or_newer_DEPRECATED_BY_COMMS {} {
 
-	if {$::runtime != "android"} {
+	if {$::android != 1} {
 		msg "android_8_or_newer reports: not android (0)"		
 		return 0
 	}
@@ -1308,11 +1302,14 @@ proc check_if_initial_connect_didnt_happen_quickly {} {
 
 }
 
-
+# REED to JOHN: This looks like dead / obsolete code (starts with an unconditional return).  
+# So I didn't do anything to update to use the new $::connectivity / $::runtime stuff.
+# However I did see that this function does get called at least once (in autopair_with_de1.tcl),
+# (which may be a line to remove from that file).
 proc ble_find_de1s {} {
 
 	return
-	if {$::runtime != "android"} {
+	if {$::android != 1} {
 		ble_connect_to_de1
 	}
 	
@@ -1385,7 +1382,7 @@ proc ble_connect_to_de1 {} {
 	#return
 
 	if {$::connectivity != "BLE"} {
-		# do nothing to the exisint DE1 connection (or lack thereof), if BLE is not supposed
+		# do nothing to the exising DE1 connection (or lack thereof), if BLE is not supposed
 		# to be handling the connection
 		return
 	}
@@ -1395,8 +1392,8 @@ proc ble_connect_to_de1 {} {
 		return ""
 	}
 
-# REED to JOHN: I don't see ::de1(scanning) referenced anywhere else in the code, this 
-# maybe should be setting ::scanning instead? I do see that in a lot of places.
+# REED to JOHN: I don't see ::de1(scanning) referenced anywhere else in the code, this line
+# maybe should be setting ::scanning instead? (I do see that referenced in a lot of places.)
     set ::de1(connect_time) 0
     set ::de1(scanning) 0
 
