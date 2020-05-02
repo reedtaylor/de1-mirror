@@ -1,10 +1,10 @@
 
 package provide de1_bluetooth
 
-set ::failed_attempt_count_connecting_to_de1 0
-set ::successful_de1_connection_count 0
+set ::failed_attempt_count_connecting_to_de1_DEPRECATED_BY_COMMS 0
+set ::successful_de1_connection_count_DEPRECATED_BY_COMMS 0
 
-proc userdata_append {comment cmd} {
+proc userdata_append_DEPRECATED_BY_COMMS {comment cmd} {
 	#set cmds [ble userdata $::de1(device_handle)]
 	#lappend cmds $cmd
 	#ble userdata $::de1(device_handle) $cmds
@@ -12,22 +12,21 @@ proc userdata_append {comment cmd} {
 	run_next_userdata_cmd
 }
 
-proc read_de1_version {} {
+proc read_de1_version_DEPRECATED_BY_COMMS {} {
 	catch {
 		userdata_append "read_de1_version" [list ble read $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_01) $::cinstance($::de1(cuuid_01))]
 	}
-
 }
 
-# repeatedly request de1 state
-proc poll_de1_state {} {
+## repeatedly request de1 state
+proc poll_de1_state_DEPRECATED_BY_COMMS {} {
 
 	msg "poll_de1_state"
 	read_de1_state
 	after 1000 poll_de1_state
 }
 
-proc read_de1_state {} {
+proc read_de1_state_DEPRECATED_BY_COMMS {} {
 	if {[catch {
 		userdata_append "read de1 state" [list ble read $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0E) $::cinstance($::de1(cuuid_0E))]
 	} err] != 0} {
@@ -89,7 +88,7 @@ proc tare_counter_incr {} {
 
 }
 
-proc int_to_hex {in} {
+proc int_to_hex_DEPRECATED_BY_COMMS {in} {
 	return [format %02X $in]
 }
 
@@ -446,7 +445,7 @@ proc skale_disable_lcd {} {
 
 
 # calibration change notifications ENABLE
-proc de1_enable_calibration_notifications {} {
+proc de1_enable_calibration_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 1"
 		return
@@ -456,7 +455,7 @@ proc de1_enable_calibration_notifications {} {
 }
 
 # calibration change notifications DISABLE
-proc de1_disable_calibration_notifications {} {
+proc de1_disable_calibration_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 2"
 		return
@@ -466,17 +465,18 @@ proc de1_disable_calibration_notifications {} {
 }
 
 # temp changes
-proc de1_enable_temp_notifications {} {
+proc de1_enable_temp_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 3"
 		return
 	}
 
+	# REED to JOHN: Prouction code has 0D (I did not change it.) but 0D looks like ShotSample not Temperatures
 	userdata_append "enable de1 temp notifications" [list ble enable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0D) $::cinstance($::de1(cuuid_0D))]
 }
 
 # status changes
-proc de1_enable_state_notifications {} {
+proc de1_enable_state_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 4"
 		return
@@ -485,7 +485,7 @@ proc de1_enable_state_notifications {} {
 	userdata_append "enable de1 state notifications" [list ble enable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0E) $::cinstance($::de1(cuuid_0E))]
 }
 
-proc de1_disable_temp_notifications {} {
+proc de1_disable_temp_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 5"
 		return
@@ -503,7 +503,7 @@ proc de1_disable_state_notifications {} {
 	userdata_append "disable state notifications" [list ble disable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0E) $::cinstance($::de1(cuuid_0E))]
 }
 
-proc mmr_available {} {
+proc mmr_available_DEPRECATED_BY_COMMS {} {
 
 	if {$::de1(mmr_enabled) == 0} {
 		if {[de1_version_bleapi] > 3} {
@@ -514,9 +514,9 @@ proc mmr_available {} {
 		}
 	}
 	return $::de1(mmr_enabled)
-}
 
-proc de1_enable_mmr_notifications {} {
+
+proc de1_enable_mmr_notifications_DEPRECATED_BY_COMMS {} {
 
 	if {[mmr_available] == 0} {
 		msg "Unable to de1_enable_mmr_notifications because MMR not available"
@@ -533,7 +533,7 @@ proc de1_enable_mmr_notifications {} {
 }
 
 # water level notifications
-proc de1_enable_water_level_notifications {} {
+proc de1_enable_water_level_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 7"
 		return
@@ -542,7 +542,7 @@ proc de1_enable_water_level_notifications {} {
 	userdata_append "enable de1 water level notifications" [list ble enable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_11) $::cinstance($::de1(cuuid_11))]
 }
 
-proc de1_disable_water_level_notifications {} {
+proc de1_disable_water_level_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 8"
 		return
@@ -552,16 +552,19 @@ proc de1_disable_water_level_notifications {} {
 }
 
 # firmware update command notifications (not writing new fw, this is for erasing and switching firmware)
-proc de1_enable_maprequest_notifications {} {
+proc de1_enable_maprequest_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 9"
 		return
 	}
 
+	# REED to JOHN: "enable de1 state notifications" is the comment param, this loosk like a 
+	# (probably harmless) copy-paste bug; should be "enable de1 maprequest notifications"
+   # I applied this correction in the de1_comms.tcl version
 	userdata_append "enable de1 state notifications" [list ble enable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_09) $::cinstance($::de1(cuuid_09))]
 }
 
-proc fwfile {} {
+proc fwfile_DEPRECATED_BY_COMMS {} {
 	
 	if {$::settings(ghc_is_installed) == 1 || $::settings(ghc_is_installed) == 2 || $::settings(ghc_is_installed) == 3} {
 		# new firmware for v1.3 machines and newer, that have a GHC.
@@ -576,9 +579,9 @@ proc fwfile {} {
 }
 
 
-proc start_firmware_update {} {
-	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-		if {$::android == 1} {
+proc start_firmware_update_DEPRECATED_BY_COMMS {} {
+	if {$::connectivity == "BLE"} {
+		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 			msg "DE1 not connected, cannot send BLE command 10"
 			return
 		}
@@ -604,7 +607,7 @@ proc start_firmware_update {} {
 	set ::de1(firmware_bytes_uploaded) 0
 	set ::de1(firmware_update_size) [file size [fwfile]]
 
-	if {$::android != 1} {
+	if {$::connectivity != "BLE"} {
 		after 100 write_firmware_now
 		set ::sinstance($::de1(suuid)) 0
 		set ::de1(cuuid_09) 0
@@ -628,7 +631,7 @@ proc start_firmware_update {} {
 
 }
 
-proc write_firmware_now {} {
+proc write_firmware_now_DEPRECATED_BY_COMMS {} {
 	set ::de1(currently_updating_firmware) 1
 	msg "Start writing firmware now"
 
@@ -639,15 +642,17 @@ proc write_firmware_now {} {
 }
 
 
-proc firmware_upload_next {} {
+proc firmware_upload_next_DEPRECATED_BY_COMMS {} {
 	
-	if {$::android == 1} {
+	if {$::connectivity != "mock"} {
 		msg "firmware_upload_next $::de1(firmware_bytes_uploaded)"
 	}
 
-	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-		msg "DE1 not connected, cannot send BLE command 11"
-		return
+	if {$::connectivity == "BLE"} {
+		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+			msg "DE1 not connected, cannot send BLE command 11"
+			return
+		}
 	}
 
 	#delay_screen_saver
@@ -656,7 +661,7 @@ proc firmware_upload_next {} {
 		set ::settings(firmware_crc) [crc::crc32 -filename [fwfile]]
 		save_settings
 
-		if {$::android != 1} {
+		if {$::connectivity == "mock"} {
 			set ::de1(firmware_update_button_label) "Updated"
 			
 		} else {
@@ -684,14 +689,14 @@ proc firmware_upload_next {} {
 		set data "\x10[make_U24P0 $::de1(firmware_bytes_uploaded)][string range $::de1(firmware_update_binary) $::de1(firmware_bytes_uploaded) [expr {15 + $::de1(firmware_bytes_uploaded)}]]"
 		userdata_append "Write [string length $data] bytes of firmware data ([convert_string_to_hex $data])" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_06) $::cinstance($::de1(cuuid_06)) $data]
 		set ::de1(firmware_bytes_uploaded) [expr {$::de1(firmware_bytes_uploaded) + 16}]
-		if {$::android != 1} {
+		if {$::connectivity != "mock"} {
 			after 1 firmware_upload_next
 		}
 	}
 }
 
 
-proc mmr_read {address length} {
+proc mmr_read_DEPRECATED_BY_COMMS {address length} {
 	if {[mmr_available] == 0} {
 		msg "Unable to mmr_read because MMR not available"
 		return
@@ -702,20 +707,23 @@ proc mmr_read {address length} {
 	set mmrloc [binary decode hex $address]
 	set data "$mmrlen${mmrloc}[binary decode hex 00000000000000000000000000000000]"
 	
-	if {$::android != 1} {
+	if {$::connectivity == "mock"} {
 		msg "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc]: with comment [convert_string_to_hex $data]"
+		return
 	}
 
-	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-		msg "DE1 not connected, cannot send BLE command 11"
-		return
+	if {$::connectivity == "BLE"} {
+		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+			msg "DE1 not connected, cannot send BLE command 11"
+			return
+		}
 	}
 
 	userdata_append "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc] with '[convert_string_to_hex $data]'" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_05) $::cinstance($::de1(cuuid_05)) $data]
 
 }
 
-proc mmr_write { address length value} {
+proc mmr_write_DEPRECATED_BY_COMMS { address length value} {
 	if {[mmr_available] == 0} {
 		msg "Unable to mmr_read because MMR not available"
 		return
@@ -726,18 +734,21 @@ proc mmr_write { address length value} {
  	set mmrval [binary decode hex $value]	
 	set data "$mmrlen${mmrloc}${mmrval}[binary decode hex 000000000000000000000000000000]"
 	
-	if {$::android != 1} {
+	if {$::connectivity ==  "mock"} {
 		msg "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]"
+		return
 	}
 
-	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-		msg "DE1 not connected, cannot send BLE command 11"
-		return
+	if {$::connectivity == "BLE"} {
+		if {[ifexists ::sinstance($::de1(suuid))] == ""} {
+			msg "DE1 not connected, cannot send BLE command 11"
+			return
+		}
 	}
 	userdata_append "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_06) $::cinstance($::de1(cuuid_06)) $data]
 }
 
-proc set_tank_temperature_threshold {temp} {
+proc set_tank_temperature_threshold_DEPRECATED_BY_COMMS {temp} {
 	msg "Setting desired water tank temperature to '$temp'"
 
 	if {$temp == 0} {
@@ -768,61 +779,61 @@ proc set_tank_temperature_threshold {temp} {
 
 
 
-proc set_steam_flow {desired_flow} {
+proc set_steam_flow_DEPRECATED_BY_COMMS {desired_flow} {
 	#return
 	msg "Setting steam flow rate to '$desired_flow'"
 	mmr_write "803828" "04" [zero_pad [int_to_hex $desired_flow] 2]
 }
 
-proc get_steam_flow {} {
+proc get_steam_flow_DEPRECATED_BY_COMMS {} {
 	msg "Getting steam flow rate"
 	mmr_read "803828" "00"
 }
 
 
-proc set_steam_highflow_start {desired_seconds} {
+proc set_steam_highflow_start_DEPRECATED_BY_COMMS {desired_seconds} {
 	#return
 	msg "Setting steam high flow rate start seconds to '$desired_seconds'"
 	mmr_write "80382C" "04" [zero_pad [int_to_hex $desired_seconds] 2]
 }
 
-proc get_steam_highflow_start {} {
+proc get_steam_highflow_start_DEPRECATED_BY_COMMS {} {
 	msg "Getting steam high flow rate start seconds "
 	mmr_read "80382C" "00"
 }
 
 
-proc set_ghc_mode {desired_mode} {
+proc set_ghc_mode_DEPRECATED_BY_COMMS {desired_mode} {
 	msg "Setting group head control mode '$desired_mode'"
 	mmr_write "803820" "04" [zero_pad [int_to_hex $desired_mode] 2]
 }
 
-proc get_ghc_mode {} {
+proc get_ghc_mode_DEPRECATED_BY_COMMS {} {
 	msg "Reading group head control mode"
 	mmr_read "803820" "00"
 }
 
-proc get_ghc_is_installed {} {
+proc get_ghc_is_installed_DEPRECATED_BY_COMMS {} {
 	msg "Reading whether the group head controller is installed or not"
 	mmr_read "80381C" "00"
 }
 
-proc get_fan_threshold {} {
+proc get_fan_threshold_DEPRECATED_BY_COMMS {} {
 	msg "Reading at what temperature the PCB fan turns on"
 	mmr_read "803808" "00"
 }
 
-proc set_fan_temperature_threshold {temp} {
+proc set_fan_temperature_threshold_DEPRECATED_BY_COMMS {temp} {
 	msg "Setting desired water tank temperature to '$temp'"
 	mmr_write "803808" "04" [zero_pad [int_to_hex $temp] 2]
 }
 
-proc get_tank_temperature_threshold {} {
+proc get_tank_temperature_threshold_DEPRECATED_BY_COMMS {} {
 	msg "Reading desired water tank temperature"
 	mmr_read "80380C" "00"
 }
 
-proc de1_cause_refill_now_if_level_low {} {
+proc de1_cause_refill_now_if_level_low_DEPRECATED_BY_COMMS {} {
 
 	# john 05-08-19 commented out, will obsolete soon.  Turns out not to work, because SLEEP mode does not check low water setting.
 	return
@@ -839,7 +850,7 @@ proc de1_cause_refill_now_if_level_low {} {
 	after 30000 de1_send_waterlevel_settings
 }
 
-proc de1_send_waterlevel_settings {} {
+proc de1_send_waterlevel_settings_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 12"
 		return
@@ -851,10 +862,9 @@ proc de1_send_waterlevel_settings {} {
 }
 
 
-
-proc run_next_userdata_cmd {} {
-	if {$::android == 1} {
-		# if running on android, only write one BLE command at a time
+proc run_next_userdata_cmd_DEPRECATED_BY_COMMS {} {
+	if {$::connectivity == "BLE"} {
+		# if communicating over BLE, only write one command at a time
 		if {$::de1(wrote) == 1} {
 			#msg "Do no write, already writing to DE1"
 			return
@@ -870,7 +880,7 @@ proc run_next_userdata_cmd {} {
 		set cmd [lindex $::de1(cmdstack) 0]
 		set cmds [lrange $::de1(cmdstack) 1 end]
 		set result 0
-		msg ">>> [lindex $cmd 0] (-[llength $::de1(cmdstack)])"
+		msg ">>> [lindex $cmd 0] (-[llength $::de1(cmdstack)]) : [lindex $cmd 1]"
 		set errcode [catch {
 		set result [{*}[lindex $cmd 1]]
 			
@@ -883,14 +893,21 @@ proc run_next_userdata_cmd {} {
 	    }
 
 
-		if {$result != 1} {
-			msg "BLE command failed, will retry ($result): [lindex $cmd 1]"
 
-			# john 4/28/18 not sure if we should give up on the command if it fails, or retry it
-			# retrying a command that will forever fail kind of kills the BLE abilities of the app
-			
-			#after 500 run_next_userdata_cmd
-			return 
+		if {$result != 1} {
+
+			if {[string first "invalid handle" $::errorInfo] != -1} {
+				msg "Not retrying this command because BLE handle for the device is now invalid"
+				#after 500 run_next_userdata_cmd
+			} else {
+				msg "BLE command failed, will retry ($result): [lindex $cmd 1]"
+
+				# john 4/28/18 not sure if we should give up on the command if it fails, or retry it
+				# retrying a command that will forever fail kind of kills the BLE abilities of the app
+				
+				after 500 run_next_userdata_cmd
+				return 
+			}
 		}
 
 
@@ -900,6 +917,10 @@ proc run_next_userdata_cmd {} {
 		if {[llength $::de1(cmdstack)] == 0} {
 			msg "BLE command queue is now empty"
 		}
+
+		# try the bluetooth stack in a second, in case there were no bluetooth commands succeeded
+		# and thus the queue doesn't keep getting tried
+		after 1000 run_next_userdata_cmd
 
 	} else {
 		#msg "no userdata cmds to run"
@@ -913,8 +934,10 @@ proc close_all_ble_and_exit {} {
 		}
 	}
 	
+# TODO(REED) global replace $::connectivity with $::de1(connectivity) or maybe reference the settings
+# directly, and give the name a "de1_" prefix
 	msg "Closing de1"
-	if {$::de1(device_handle) != 0} {
+	if {$::connectivity == "BLE" && $::de1(device_handle) != 0} {
 		catch {
 			ble close $::de1(device_handle)
 		}
@@ -927,7 +950,6 @@ proc close_all_ble_and_exit {} {
 		}
 	}
 
-
 	catch {
 		if {$::settings(ble_unpair_at_exit) == 1} {
 			#ble unpair $::de1(de1_address)
@@ -939,10 +961,10 @@ proc close_all_ble_and_exit {} {
 	exit 0
 }	
 
-proc app_exit {} {
+proc app_exit_DEPRECATED_BY_COMMS {} {
 	close_log_file
 
-	if {$::android != 1} {
+	if {$::connectivity == "mock"} {
 		close_all_ble_and_exit
 	}
 
@@ -964,7 +986,7 @@ proc app_exit {} {
 	after 10000 "exit 0"
 }
 
-proc de1_send_state {comment msg} {
+proc de1_send_state_DEPRECATED_BY_COMMS {comment msg} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 13"
 		return
@@ -993,7 +1015,7 @@ proc de1_send_state {comment msg} {
 
 #}
 
-proc de1_send_shot_frames {} {
+proc de1_send_shot_frames_DEPRECATED_BY_COMMS {} {
 
 	set parts [de1_packed_shot]
 	set header [lindex $parts 0]
@@ -1033,7 +1055,32 @@ proc de1_send_shot_frames {} {
 	return
 }
 
-proc ble_write_010 {packed_frame} {
+# REED to JOHN: I was asking you about these two routines (ble_write_010 and ble_write_00f), and
+# in our chat you indicated that the purpose of these two specialized BLE writes is to guarantee the
+# sequencing / atomicity of the shotframe BLE writes -- first sending the header, then the frames,
+# in order, and without interruption.  
+# 
+# That makes sense to me in concept but I can't see how these routines makes that guarantee, or how it 
+# differs in a material way from a "normal" BLE write as seen elsewhere in this
+# file.
+# 
+# If there was a single proc that called both ble_write_010 and ble_write_00f in sequence, 
+# so that they were both executed within a single call to run_next_userdata_cmd .. then I would
+# totally get it.  Or, if there was a looping construct in either of these calls that iteratively called
+# [ble write ...] then I woulg also get it.  But I dont see either of those things happening.
+#
+# Instead I see de1_send_shot_frames actually just pushing ble_write_00f and a series of 
+# ble_write_010s onto the cmdstack independently, via userdata_append, just like any other operation.
+# Seems great but it raises the question - what if de1_send_shot_frames instead just used 
+# userdata_append to push [ble write ... cuuid_0f] and [ble write ... cuuid10]?  Would that be different
+# to calling these two wrapper functions, which in turn just perform the [ble write...] commands I mentioned,
+# directly?
+#
+# Because I couldn't convince myself of the usefulness of these functions I did not preserve these wrappers
+# in the de1_comms layer, and these are now effectively obsolete (unlike most of the other 
+# "_DEPRECATED_BY_COMMS" functions, which were instead ported ino the de1_comms layer -- i.e. the functions
+# themselves are still implemented somewhere)
+proc ble_write_010_DEPRECATED_BY_COMMS {packed_frame} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 14"
 		return
@@ -1044,7 +1091,7 @@ proc ble_write_010 {packed_frame} {
 	#ble execute $::de1(device_handle); 
 }
 
-proc ble_write_00f {packed_frame} {
+proc ble_write_00f_DEPRECATED_BY_COMMS {packed_frame} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 15"
 		return
@@ -1055,12 +1102,12 @@ proc ble_write_00f {packed_frame} {
 	#ble execute $::de1(device_handle); 
 }
 
-proc save_settings_to_de1 {} {
+proc save_settings_to_de1_DEPRECATED_BY_COMMS {} {
 	de1_send_shot_frames
 	de1_send_steam_hotwater_settings
 }
 
-proc de1_send_steam_hotwater_settings {} {
+proc de1_send_steam_hotwater_settings_DEPRECATED_BY_COMMS {} {
 
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 16"
@@ -1075,7 +1122,7 @@ proc de1_send_steam_hotwater_settings {} {
 	set_steam_highflow_start $::settings(steam_highflow_start)
 }
 
-proc de1_send_calibration {calib_target reported measured {calibcmd 1} } {
+proc de1_send_calibration_DEPRECATED_BY_COMMS {calib_target reported measured {calibcmd 1} } {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 17"
 		return
@@ -1106,7 +1153,7 @@ proc de1_send_calibration {calib_target reported measured {calibcmd 1} } {
 	userdata_append "Set calibration: [array get arr2] : [string length $data] bytes: ([convert_string_to_hex $data])" [list ble write $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_12) $::cinstance($::de1(cuuid_12)) $data]
 }
 
-proc de1_read_calibration {calib_target {factory 0} } {
+proc de1_read_calibration_DEPRECATED_BY_COMMS {calib_target {factory 0} } {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 18"
 		return
@@ -1144,7 +1191,9 @@ proc de1_read_calibration {calib_target {factory 0} } {
 
 }
 
-proc de1_read_version {} {
+proc de1_read_version_obsolete_DEPRECATED_BY_COMMS {} {
+	msg "LIKELY OBSOLETE BLE FUNCTION: DO NOT USE"
+
 	#if {$::de1(device_handle) == "0"} {
 	#	msg "error: de1 not connected"
 	#	return
@@ -1153,7 +1202,7 @@ proc de1_read_version {} {
 	userdata_append "read de1 version" [list ble read $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0A) $::cinstance($::de1(cuuid_0A))]
 }
 
-proc de1_read_hotwater {} {
+proc de1_read_hotwater_DEPRECATED_BY_COMMS {} {
 	#if {$::de1(device_handle) == "0"} {
 	#	msg "error: de1 not connected"
 	#	return
@@ -1162,7 +1211,7 @@ proc de1_read_hotwater {} {
 	userdata_append "read de1 hot water/steam" [list ble read $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0B) $::cinstance($::de1(cuuid_0B))]
 }
 
-proc de1_read_shot_header {} {
+proc de1_read_shot_header_DEPRECATED_BY_COMMS {} {
 	#if {$::de1(device_handle) == "0"} {
 	#	msg "error: de1 not connected"
 	#	return
@@ -1170,7 +1219,7 @@ proc de1_read_shot_header {} {
 
 	userdata_append "read shot header" [list ble read $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0F) $::cinstance($::de1(cuuid_0F))]
 }
-proc de1_read_shot_frame {} {
+proc de1_read_shot_frame_DEPRECATED_BY_COMMS {} {
 	#if {$::de1(device_handle) == "0"} {
 	#	msg "error: de1 not connected"
 	#	return
@@ -1179,7 +1228,7 @@ proc de1_read_shot_frame {} {
 	userdata_append "read shot frame" [list ble read $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_10) $::cinstance($::de1(cuuid_10))]
 }
 
-proc remove_null_terminator {instr} {
+proc remove_null_terminator_DEPRECATED_BY_COMMS {instr} {
 	set pos [string first "\x00" $instr]
 	if {$pos == -1} {
 		return $instr
@@ -1189,9 +1238,14 @@ proc remove_null_terminator {instr} {
 	return [string range $instr 0 $pos]
 }
 
-proc android_8_or_newer {} {
+# REED to JOHN: I know this version matters a lot to make bluetooth work properly, but because 
+# there's nothign BLE-specific about making the actual "what version is it" determination, I 
+# went ahead and ported it into the de1_comms layer.  
+#
+# It seems like maybe it should even more naturally move into utils.tcl.  Just a thought.
+proc android_8_or_newer_DEPRECATED_BY_COMMS {} {
 
-	if {$::android != 1} {
+	if {$::runtime != "android"} {
 		msg "android_8_or_newer reports: not android (0)"		
 		return 0
 	}
@@ -1258,7 +1312,7 @@ proc check_if_initial_connect_didnt_happen_quickly {} {
 proc ble_find_de1s {} {
 
 	return
-	if {$::android != 1} {
+	if {$::runtime != "android"} {
 		ble_connect_to_de1
 	}
 	
@@ -1330,21 +1384,9 @@ proc ble_connect_to_de1 {} {
 	msg "ble_connect_to_de1"
 	#return
 
-	if {$::android != 1} {
-		msg "simulated DE1 connection"
-	    set ::de1(connect_time) [clock seconds]
-	    set ::de1(last_ping) [clock seconds]
-
-	    msg "Connected to fake DE1"
-		set ::de1(device_handle) 1
-
-		# example binary string containing binary version string
-		#set version_value "\x01\x00\x00\x00\x03\x00\x00\x00\xAC\x1B\x1E\x09\x01"
-		#set version_value "\x01\x00\x00\x00\x03\x00\x00\x00\xAC\x1B\x1E\x09\x01"
-		set version_value "\x02\x04\x00\xA4\x0A\x6E\xD0\x68\x51\x02\x04\x00\xA4\x0A\x6E\xD0\x68\x51"
-		parse_binary_version_desc $version_value arr2
-		set ::de1(version) [array get arr2]
-
+	if {$::connectivity != "BLE"} {
+		# do nothing to the exisint DE1 connection (or lack thereof), if BLE is not supposed
+		# to be handling the connection
 		return
 	}
 
@@ -1353,6 +1395,8 @@ proc ble_connect_to_de1 {} {
 		return ""
 	}
 
+# REED to JOHN: I don't see ::de1(scanning) referenced anywhere else in the code, this 
+# maybe should be setting ::scanning instead? I do see that in a lot of places.
     set ::de1(connect_time) 0
     set ::de1(scanning) 0
 
@@ -1484,7 +1528,7 @@ proc append_to_scale_bluetooth_list {address name} {
 	}
 }
 
-proc later_new_de1_connection_setup {} {
+proc later_new_de1_connection_setup_DEPRECATED_BY_COMMS {} {
 	# less important stuff, also some of it is dependent on BLE version
 
 	de1_enable_mmr_notifications
@@ -1870,7 +1914,7 @@ proc de1_ble_handler { event data } {
 
 						} elseif {$cuuid == "0000A012-0000-1000-8000-00805F9B34FB"} {
 						    #set ::de1(last_ping) [clock seconds]
-						    calibration_ble_received $value
+						    calibration_received $value
 						} elseif {$cuuid == "0000A011-0000-1000-8000-00805F9B34FB"} {
 							set ::de1(last_ping) [clock seconds]
 							parse_binary_water_level $value arr2
@@ -2341,7 +2385,7 @@ proc de1_ble_handler { event data } {
     #msg "exited event"
 }
 
-proc calibration_ble_received {value} {
+proc calibration_ble_received_DEPRECATED_BY_COMMS {value} {
 
     #calibration_ble_received $value
 	parse_binary_calibration $value arr2
@@ -2382,7 +2426,7 @@ proc calibration_ble_received {value} {
 
 }
 
-proc after_shot_weight_hit_update_final_weight {} {
+proc after_shot_weight_hit_update_final_weight_DEPRECATED_BY_COMMS {} {
 
 	if {$::de1(scale_sensor_weight) > $::de1(final_water_weight)} {
 		# if the current scale weight is more than the final weight we have on record, then update the final weight
@@ -2392,7 +2436,7 @@ proc after_shot_weight_hit_update_final_weight {} {
 
 }
 
-proc fast_write_open {fn parms} {
+proc fast_write_open_DEPRECATED_BY_COMMS {fn parms} {
     set f [open $fn $parms]
     fconfigure $f -blocking 0
     fconfigure $f -buffersize 1000000
@@ -2425,7 +2469,7 @@ proc scanning_restart {} {
 	if {$::scanning == 1} {
 		return
 	}
-	if {$::android != 1} {
+	if {$::connectivity == "mock"} {
 
 		set ::scale_bluetooth_list [list "12:32:56:78:90" "32:56:78:90:12" "56:78:90:12:32"]
 		set ::de1_bluetooth_list [list "12:32:56:18:90" "32:56:78:90:13" "56:78:90:13:32"]

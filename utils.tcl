@@ -15,10 +15,11 @@ proc setup_environment {} {
     global screen_size_width
     global screen_size_height
     global fontm
-    global android
-    global undroid
+# TODO(REED) decide whether we are doing global x vs ::x and clean up (probably ::)
+    global runtime 
+    global connectivity
 
-    if {$android == 1 || $undroid == 1} {
+    if {$runtime == "android" || $runtime == undroid} {
         #package require BLT
         #namespace import blt::*
         #namespace import -force blt::tile::*
@@ -46,7 +47,7 @@ proc setup_environment {} {
 
 
             # A better approach than a pause to wait for the lower panel to move away might be to "bind . <<ViewportUpdate>>" or (when your toplevel is in fullscreen mode) to "bind . <Configure>" and to watch out for "winfo screenheight" in the bound code.
-            if {$android == 1} {
+            if {$runtime == "android"} {
                 pause 500
             }
 
@@ -105,7 +106,7 @@ proc setup_environment {} {
         set fontm $::settings(default_font_calibration)
         set ::fontw 1
 
-        if {$::undroid == 1} {
+        if {$::runtime == "undroid"} {
             # undroid does not resize fonts appropriately for the current resolution, it assumes a 1024 resolution
             set fontm [expr {($screen_size_width / 1024.0)}]
             set ::fontw 2
@@ -297,7 +298,7 @@ proc setup_environment {} {
     ############################################
     # future feature: flight mode
     #if {$::settings(flight_mode_enable) == 1} {
-        #if {$android == 1} {
+        #if {$runtime == "android"} {
         #   .can bind . "<<SensorUpdate>>" [accelerometer_data_read]
         #}
         #after 250 accelerometer_check
@@ -517,7 +518,7 @@ proc language {} {
     } 
 
 
-    if {$::android != 1} {
+    if {$::runtime != "android"} {
         # on non-android OS, we don't know the system language so use english if nothing else is set
         return "en"
     }
@@ -618,7 +619,7 @@ proc translate {english} {
                 # if the translated version of the English is NOT blank, return it
                 #log_to_debug_file [encoding names]
                 #log_to_debug_file "English: '$available([language])'"
-                if {[language] == "ar" && ($::android == 1 || $::undroid == 1)} {
+                if {[language] == "ar" && ($::runtime == "android" || $::runtime == "undroid")} {
                     # use the "arb" column on Android/Undroid because they do not correctly right-to-left text like OSX does
                     return $available(arb)
                 }
@@ -632,7 +633,7 @@ proc translate {english} {
     } 
 
     # if no translation found, return the english text
-    if {$::android != 1} {
+    if {$::runtime != "android"} {
         if {[info exists ::already_shown_trans($english)] != 1} {
             set t [subst {"$english" \{}]
             foreach {l d} [translation_langs_array] {
@@ -670,11 +671,17 @@ proc skin_directory {} {
     return $dir
 }
 
-proc android_specific_stubs {} {
+# REED 
+proc android_specific_stubs {} {  
 
-    proc ble {args} { msg "ble $args"; return 1 }
+    proc ble {args} { 
+    	msg "UNCAUGHT >>>>>> ble $args"; 
+    	return 1 
+	return 1 
+    	return 1 
+    }
     
-    if {$::android != 1 && $::undroid != 1} {
+    if {$::runtime != "android" && $::runtime != "undroid"} {
         proc sdltk {args} {
             if {[lindex $args 0] == "powerinfo"} {
                 #msg "sdltk powerinfo"
@@ -684,6 +691,7 @@ proc android_specific_stubs {} {
             }
         }
     }
+
     proc borg {args} { 
         if {[lindex $args 0] == "locale"} {
             return [list "language" "en"]
@@ -911,7 +919,7 @@ proc accelerometer_check {} {
 
 proc say {txt sndnum} {
 
-    if {$::android != 1} {
+    if {$::runtime != "android"} {
         #return
     }
 
@@ -1199,8 +1207,9 @@ proc round_date_to_nearest_day {now} {
 
 # from Barney  https://3.basecamp.com/3671212/buckets/7351439/documents/2208672342#__recording_2349428596
 proc load_font {name fn pcsize {androidsize {}} } {
+    set familyname ""
     # calculate font size
-    if {($::android == 1 || $::undroid == 1) && $androidsize != ""} {
+    if {($::runtime == "android" || $::runtime == "undroid") && $androidsize != ""} {
         set pcsize $androidsize
     }
     set platform_font_size [expr {int(1.0 * $::fontm * $pcsize)}]
@@ -1218,11 +1227,16 @@ proc load_font {name fn pcsize {androidsize {}} } {
     set fontindex [lsearch $::loaded_fonts $fn]
     if {$fontindex != -1} {
         set familyname [lindex $::loaded_fonts [expr $fontindex + 1]]
-    } elseif {($::android == 1 || $::undroid == 1) && $fn != ""} {
+    } elseif {($::runtime == "android" || $::runtime == "undroid") && $fn != ""} {
         catch {
             set familyname [lindex [sdltk addfont $fn] 0]
         }
-        lappend ::loaded_fonts $fn $familyname
+
+        if {$familyname == ""} {
+            msg "Unable to get familyname from 'sdltk addfont $fn'"
+        } else {
+            lappend ::loaded_fonts $fn $familyname
+        }
     }
 
     if {[info exists familyname] != 1 || $familyname == ""} {
@@ -1274,7 +1288,7 @@ proc load_font_obsolete {name fn pcsize {androidsize {}} } {
  
     if {[language] == "zh-hant" || [language] == "zh-hans"} {
 
-        if {$::android == 1 || $::undroid == 1} {
+        if {$::runtime == "android" || $::runtime == "undroid"} {
             font create $name -family $::helvetica_font -size [expr {int(1.0 * $::fontm * $androidsize)}]
         } else {
             font create "$name" -family $::helvetica_font -size [expr {int(1.0 * $pcsize * $::fontm)}]
@@ -1283,7 +1297,7 @@ proc load_font_obsolete {name fn pcsize {androidsize {}} } {
         return
     } elseif {[language] == "th"} {
 
-        if {$::android == 1 || $::undroid == 1} {
+        if {$::runtime == "android" || $::runtime == "undroid"} {
             if {[info exists ::thai_fontname] != 1} {
                 set fn "[homedir]/fonts/sarabun.ttf"
                 set ::thai_fontname  [sdltk addfont $fn]
@@ -1296,7 +1310,7 @@ proc load_font_obsolete {name fn pcsize {androidsize {}} } {
         return
     } else {
         #puts "$::android load_font $name '$fn' $size : fontm: $::fontm"
-        if {$::android == 1 || $::undroid == 1} {
+        if {$::runtime == "android" || $::runtime == "undroid"} {
             #puts "sdltk addfont '$fn'"
             set result ""
             catch {
@@ -1334,7 +1348,7 @@ proc web_browser {url} {
 
 proc font_width {untranslated_txt font} {
     set x [font measure $font -displayof .can [translate $untranslated_txt]]
-    #if {$::android != 1} {    
+    #if {$::runtime != "android"} {    
         # not sure why font measurements are half off on osx but not on android
         return [expr {2 * $x}]
     #}

@@ -585,7 +585,7 @@ proc waterflow {} {
 		return 0
 	}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		if {[ifexists ::de1(flow)] == ""} {
 			set ::de1(flow) 3
 		}
@@ -622,7 +622,7 @@ proc watervolume {} {
 	}
 
 
-	if {$::android == 1} {
+	if {$::connectivity != "mock"} {
 		return $::de1(volume)
 	}
 	global start_timer
@@ -630,7 +630,7 @@ proc watervolume {} {
 }
 
 proc steamtemp {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 
 		set ::de1(steam_heater_temperature) [expr {(160+(rand() * 5))}]
 	}
@@ -638,7 +638,7 @@ proc steamtemp {} {
 }
 
 proc watertemp {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#set ::de1(head_temperature) [expr {$::settings(espresso_temperature) - 2.0 + (rand() * 4)}]
 		set ::de1(goal_temperature) $::settings(espresso_temperature)
 
@@ -667,7 +667,7 @@ proc pressure {} {
 		return 0
 	}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		if {$::de1(state) == 4} {
 			#espresso
 			if {[ifexists ::de1(pressure)] == ""} {
@@ -701,13 +701,13 @@ proc pressure {} {
 	}
 
 	return $::de1(pressure)
-	#if {$::android == 1} {
+	#if {$::runtime == "android"} {
 	#}
 	#return [expr {(rand() * 3.5)}]
 }
 
 proc accelerometer_angle {} {
-	if {$::android == 0} {
+	if {$::runtime != "android"} {
 		set ::settings(accelerometer_angle) [expr {(rand() + $::settings(accelerometer_angle)) - 0.5}]
 	}
 	#msg "::settings(accelerometer_angle) : $::settings(accelerometer_angle)"
@@ -737,7 +737,7 @@ proc accelerometer_angle_text {} {
 proc group_head_heater_temperature {} {
 
 	
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		# slowly have the water level drift
 		set ::de1(water_level) [expr {$::de1(water_level) + (.1*(rand() - 0.5))}]
 		#puts -nonewline .
@@ -749,7 +749,7 @@ proc group_head_heater_temperature {} {
 }
 
 proc steam_heater_temperature {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		set ::de1(mix_temperature) [expr {140 + (rand() * 20.0)}]
 	}
 
@@ -757,7 +757,7 @@ proc steam_heater_temperature {} {
 
 }
 proc water_mix_temperature {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		if {$::de1(substate) == $::de1_substate_types_reversed(pouring) || $::de1(substate) == $::de1_substate_types_reversed(preinfusion)} {	
 			if {$::de1(mix_temperature) == "" || $::de1(mix_temperature) < 85 || $::de1(mix_temperature) > 99} {
 				set ::de1(mix_temperature) 94
@@ -902,6 +902,18 @@ proc return_stop_at_weight_measurement {in} {
 	}
 }
 
+proc return_stop_at_weight_measurement_precise {in} {
+	if {$in == 0} {
+		return [translate "off"]
+	} else {
+		if {$::settings(enable_fluid_ounces) != 1} {
+			return [subst {[round_to_one_digits $in][translate "g"]}]
+		} else {
+			return [subst {[round_to_half_integer [ml_to_oz $in]] oz}]
+		}
+	}
+}
+
 proc return_shot_weight_measurement {in} {
 	if {$in == 0} {
 		return [translate "off"]
@@ -928,7 +940,7 @@ proc waterflow_text {} {
 }
 
 proc watervolume_text {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		if {$::de1(substate) == $::de1_substate_types_reversed(pouring) || $::de1(substate) == $::de1_substate_types_reversed(preinfusion)} {	
 			if {$::de1(volume) == ""} {
 				set ::de1(volume) 0
@@ -942,7 +954,7 @@ proc watervolume_text {} {
 }
 
 proc waterweightflow_text {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		if {$::de1(substate) == $::de1_substate_types_reversed(pouring) || $::de1(substate) == $::de1_substate_types_reversed(preinfusion)} {	
 			if {[espresso_millitimer] > 5000} {	
 				# no weight increase for 5s due to preinfusion
@@ -991,7 +1003,7 @@ proc waterweight_text {} {
 		return ""
 	}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		if {[espresso_millitimer] < 5000} {	
 			# no weight increase for 5s due to preinfusion
 			set ::de1(scale_weight) 0
@@ -1024,7 +1036,7 @@ proc waterweight_label_text {} {
 		return ""
 	}
 
-	if {$::android == 0} {
+	if {$::runtime != "android"} {
 		return [translate "Weight"]
 	}
 
@@ -1083,7 +1095,7 @@ proc diff_group_temp_from_goal_text {} {
 }
 
 proc diff_pressure {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		return [expr {3 - (rand() * 6)}]
 	}
 
@@ -1091,7 +1103,7 @@ proc diff_pressure {} {
 }
 
 proc diff_flow_rate {} {
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		return [expr {3 - (rand() * 6)}]
 	}
 
@@ -1637,7 +1649,7 @@ proc fill_ble_listbox {} {
 #	set ble_ids [list "C1:80:A7:32:CD:A3" "C5:80:EC:A5:F9:72" "F2:C3:43:60:AB:F5"]
 	#lappend ::de1_bluetooth_list $address
 
-	if {$::android == 0} {	
+	if {$::connectivity != "BLE"} {	
 		#set ::scale_bluetooth_list [list "C1:80:A7:32:CD:A3" "C5:80:EC:A5:F9:72" "F2:C3:43:60:AB:F5"]
 		#set ::de1_bluetooth_list ""
 	}
@@ -2486,8 +2498,25 @@ proc preview_profile {} {
 	update_onscreen_variables
 	profile_has_not_changed_set
 
+	# as of v1.3 people can start an espresso from the group head, which means their currently selected 
+	# profile needs to sent right away to the DE1, in case the person taps the GH button to start espresso w/o leaving settings
+	send_de1_settings_soon
+
 #set ::settings(profile_notes) [clock seconds]
 }
+
+
+proc send_de1_settings_soon  {} {
+	if {[info exists ::save_settings_to_de1_id] == 1} {
+		after cancel $::save_settings_to_de1_id; 
+		unset -nocomplain ::save_settings_to_de1_id
+		msg "cancelled extra de1_send"
+	}
+
+	set ::save_settings_to_de1_id [after 500 save_settings_to_de1]
+}
+
+
 
 proc profile_has_changed_set_colors {} {
 	#msg "profile_has_changed_set_colors : $::settings(profile_has_changed) [stacktrace]"

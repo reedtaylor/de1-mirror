@@ -49,10 +49,11 @@ proc Double2Fraction { dbl {eps 0.000001}} {
 
 proc photoscale {img sx {sy ""} } {
 
-	if {($::android == 1 && $::undroid != 1)} {
+# TODO(REED) undroids in this file
+	if {($::runtime == "android" && $::undroid != 1)} {
 		#photoscale_not_android $img $sx $sy
 		photoscale_android $img $sx $sy
-	} elseif {$::undroid == 1} {
+	} elseif {$::runtime == "undroid"} {
 		# no undroid support for this yet
 		photoscale_android $img $sx $sy
 		#photoscale_not_android $img $sx $sy
@@ -246,10 +247,47 @@ proc vertical_slider {varname minval maxval x y x0 y0 x1 y1} {
 
 }
 
+# on android we track finger-down, instead of button-press, as it gives us lower latency by avoding having to distinguish a potential gesture from a tap
+# finger down gives a http://blog.tcl.tk/39474
+proc translate_coordinates_finger_down_x { x } {
+
+	if {$::android == 1} {
+	 	return [expr {$x * [winfo screenwidth .] / 10000}]
+	 }
+	 return $x
+}
+proc translate_coordinates_finger_down_y { y } {
+
+	if {$::android == 1} {
+	 	return [expr {$y * [winfo screenheight .] / 10000}]
+	 }
+	 return $y
+}
+
+proc is_fast_double_tap { key } {
+	# if this is a fast double-tap, then treat it like a long tap (button-3) 
+
+	set b 0
+	set millinow [clock milliseconds]
+	set prevtime [ifexists ::last_click_time($key)]
+	if {$prevtime != ""} {
+		# check for a fast double-varName
+		if {[expr {$millinow - $prevtime}] < 200} {
+			msg "Fast button double-tap on $key"
+			set b 1
+		}
+	}
+	set ::last_click_time($key) $millinow
+
+	return $b
+}
 
 proc vertical_clicker {bigincrement smallincrement varname minval maxval x y x0 y0 x1 y1 {b 0} } {
 	# b = which button was tapped
-	msg "Button $b"
+	#msg "Var: $varname : Button $b  $x $y $x0 $y0 $x1 $y1 "
+
+	set x [translate_coordinates_finger_down_x $x]
+	set y [translate_coordinates_finger_down_y $y]
 
 	set yrange [expr {$y1 - $y0}]
 	set yoffset [expr {$y - $y0}]
@@ -258,20 +296,30 @@ proc vertical_clicker {bigincrement smallincrement varname minval maxval x y x0 
 	set onequarterpoint [expr {$y0 + ($yrange / 4)}]
 	set threequarterpoint [expr {$y1 - ($yrange / 4)}]
 
+	set onethirdpoint [expr {$y0 + ($yrange / 3)}]
+	set twothirdpoint [expr {$y1 - ($yrange / 3)}]
+
 	if {[info exists $varname] != 1} {
-		# if the variable doesn't yet exist, initiialize it with a zero value
+		# if the variable doesn't yet exist, initialize it with a zero value
 		set $varname 0
 	}
 	set currentval [subst \$$varname]
 	set newval $currentval
 
-	if {$y < $midpoint} {
+	# check for a fast double tap
+	set b 0
+	if {[is_fast_double_tap $varname] == 1} {
+		#set the button to 3, which is the same as a long press, or middle button (ie button 3) on a mouse
+		set b 3
+	}
+
+	if {$y < $onethirdpoint} {
 		if {$b == 3} {
 			set newval [expr "1.0 * \$$varname + $bigincrement"]
 		} else {
 			set newval [expr "1.0 * \$$varname + $smallincrement"]
 		}
-	} else {
+	} elseif {$y > $twothirdpoint} {
 		if {$b == 3} {
 			set newval [expr "1.0 * \$$varname - $bigincrement"]
 		} else {
@@ -540,13 +588,14 @@ proc install_this_app_icon_beta {} {
 	}
 }
 
-
 proc platform_button_press {} {
-	global android 
-	if {$android == 1} {
-		#return {<<FingerUp>>}
-		return {<ButtonPress-1>}
+	global runtime 
+	#return {<Motion>}
+	if {$runtime == "android"} {
+		return {<<FingerDown>>}
+		#return {<ButtonPress-1>}
 	}
+	#return {<Motion>}
 	return {<ButtonPress-1>}
 }
 
@@ -560,16 +609,16 @@ proc platform_button_long_press {} {
 }
 
 proc platform_finger_down {} {
-	global android 
-	if {$android == 1} {
-		return {<Motion>}
+	global runtime 
+	if {$runtime == "android"} {
+		return {<<FingerDown>>}
 	}
-	return {<Motion>}
+	return {<ButtonPress-1>}
 }
 
 proc platform_button_unpress {} {
-	global android 
-	if {$android == 1} {
+	global runtime 
+	if {$runtime == "android"} {
 		return {<<FingerUp>>}
 	}
 	return {<ButtonRelease-1>}
@@ -672,14 +721,14 @@ proc add_de1_button {displaycontexts tclcode x0 y0 x1 y1 {options {}}} {
 
 	.can bind $btn_name [platform_button_press] $tclcode
 	
-	if {$::settings(disable_long_press) != 1 } {
-		.can bind $btn_name [platform_button_long_press] $tclcode
-	}
+#	if {$::settings(disable_long_press) != 1 } {
+#		.can bind $btn_name [platform_button_long_press] $tclcode
+#	}
 
-	if {[string first mousemove $options] != -1} {
+#	if {[string first mousemove $options] != -1} {
 		#puts "mousemove detected"
-		.can bind $btn_name [platform_finger_down] $tclcode
-	}
+#		.can bind $btn_name [platform_finger_down] $tclcode
+#	}
 
 	foreach displaycontext $displaycontexts {
 		add_visual_item_to_context $displaycontext $btn_name
@@ -756,7 +805,7 @@ proc add_de1_widget {args} {
 	}
 
 	# BLT on android has non standard defaults, so we overrride them here, sending them back to documented defaults
-	if {$widgettype == "graph" && ($::android == 1 || $::undroid == 1)} {
+	if {$widgettype == "graph" && ($::runtime == "android" || $::runtime == "undroid")} {
 		$widget grid configure -dashes "" -color #DDDDDD -hide 0 -minor 1 
 		$widget configure -borderwidth 0
 		#$widget grid configure -hide 0
@@ -929,7 +978,7 @@ proc de1_connected_state { {hide_delay 0} } {
 	set since_last_ping [expr {[clock seconds] - $::de1(last_ping)}]
 	set elapsed [expr {[clock seconds] - $::de1(connect_time)}]
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 
 		if {$elapsed > $hide_delay && $hide_delay != 0} {
 			if {$::de1(substate) != 0} {
@@ -1040,7 +1089,7 @@ proc update_onscreen_variables { {state {}} } {
 	#set since_last_ping [expr {[clock seconds] - $::de1(last_ping)}]
 	#if {$since_last_ping > 3} {
 		#set ::de1(last_ping) [clock seconds]
-		#if {$::android == 1} {
+		#if {$::runtime == "android"} {
 			#set ::de1(found) 0
 			#ble_find_de1s
 			#ble_connect_to_de1
@@ -1048,7 +1097,7 @@ proc update_onscreen_variables { {state {}} } {
 
 	#}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 
 		if {[expr {int(rand() * 100)}] > 96} {
 			set ::state_change_chart_value [expr {$::state_change_chart_value * -1}]
@@ -1358,12 +1407,20 @@ proc page_display_change {page_to_hide page_to_show} {
 proc update_de1_explanation_chart_soon  { {context {}} } {
 	# we can optionally delay displaying the chart until data from the slider stops coming
 	update_de1_explanation_chart
-	#return
-	#after cancel update_de1_explanation_chart
-	#after 5 update_de1_explanation_chart
+	return
+	
+	#after 10 {after cancel update_de1_explanation_chart; after idle update_de1_explanation_chart}
+	if {[info exists ::chart_update_id] == 1} {
+		after cancel $::chart_update_id; 
+		unset -nocomplain ::chart_update_id
+	}
+
+	set ::chart_update_id [after idle update_de1_explanation_chart]
+	#after idle update_de1_explanation_chart
 }
 
 proc update_de1_explanation_chart { {context {}} } {
+	#puts "update_de1_explanation_chart"
 	#puts "update_de1_explanation_chart 1: $::settings(settings_profile_type)"
 
 	espresso_de1_explanation_chart_elapsed length 0
@@ -2001,7 +2058,7 @@ proc calibration_gui_init {} {
 	# the *right* way to work around this is to build a spool and unspool each calibration read command as the previous
 	# one concludes. However, that's a lot of work, for this rarely used calibration feature, so we're being lazy
 	# for now and just issuing each command after a suitable delay, so they don't clobber each other
-	if {$::android != 1} {
+	if {$::connectivity == "mock"} {
 
 		# do fake calibration reads
 		calibration_ble_received "\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\xFF\xFD\xB3\x34"
@@ -2391,28 +2448,60 @@ proc profile_title {} {
 }
 
 # space = idle
-# e = espresso 
-# f = flush
-# s = steam
-# w = water
+# f = flush (1)
+# e = espresso (2)
+# s = steam (3)
+# w = water (4)
+# the number version causes the state to arrive as if the DE1 has caused it, such as from the GHC.  
+# This is useful for testing that the GUI responds correctly to GHC caused events.  
 
 proc handle_keypress {keycode} {
-	#msg "Keypress detected: $keycode"
-	if {$keycode == 101} {
+	msg "Keypress detected: $keycode / $::some_droid"
+
+	if {($::some_droid != 1 && $keycode == 101) || ($::some_droid == 1 && $keycode == 8)} {
 		# e = espresso 
 		start_espresso
-	} elseif {$keycode == 32} {
+
+	} elseif {($::some_droid != 1 && $keycode == 32) || ($::some_droid == 1 && $keycode == 44)} {
 		# space = idle
 		start_idle
-	} elseif {$keycode == 102} {
+
+	} elseif {($::some_droid != 1 && $keycode == 102) || ($::some_droid == 1 && $keycode == 9)} {
 		# f = flush
 		start_hot_water_rinse
-	} elseif {$keycode == 115} {
+
+	} elseif {($::some_droid != 1 && $keycode == 115) || ($::some_droid == 1 && $keycode == 22)} {
 		# s = steam
 		start_steam
-	} elseif {$keycode == 119} {
+
+	} elseif {($::some_droid != 1 && $keycode == 119) || ($::some_droid == 1 && $keycode == 26)} {
 		# w = water
 		start_water
+
+	} elseif {($::some_droid != 1 && $keycode == 50) || ($::some_droid == 1 && $keycode == 31)} {
+		# ctrl-e = espresso or 2 on android
+		update_de1_state "$::de1_state(Espresso)\x0"
+		de1_send_state "make espresso" $::de1_state(Espresso)
+
+	} elseif {($::some_droid != 1 && $keycode == 48) || ($::some_droid == 1 && $keycode == 39)} {
+		# ctrl-space = idle or 0 on android
+		update_de1_state "$::de1_state(Idle)\x0"
+		de1_send_state "go idle" $::de1_state(Idle)
+
+	} elseif {($::some_droid != 1 && $keycode == 49) || ($::some_droid == 1 && $keycode == 30)} {
+		# ctrl-f = flush or 1 on android
+		update_de1_state "$::de1_state(HotWaterRinse)\x0"
+		de1_send_state "hot water rinse" $::de1_state(HotWaterRinse)
+
+	} elseif {($::some_droid != 1 && $keycode == 51) || ($::some_droid == 1 && $keycode	== 32)} {
+		# ctrl-s = steam or 3 on android
+		update_de1_state "$::de1_state(Steam)\x0"
+		de1_send_state "make steam" $::de1_state(Steam)
+
+	} elseif {($::some_droid != 1 && $keycode == 52) || ($::some_droid == 1 && $keycode == 33)} {
+		# ctrl-w = water or 4 on android
+		update_de1_state "$::de1_state(HotWater)\x0"
+		de1_send_state "make hot water" $::de1_state(HotWater)
 	}
 }
 

@@ -1,6 +1,6 @@
 
-# Created by https://www.gitignore.io/api/emacs,visualstudiocode
-# Edit at https://www.gitignore.io/?templates=emacs,visualstudiocode
+# Created by https://www.gitignore.io/api/osx,visualstudiocode,emacs
+# Edit at https://www.gitignore.io/?templates=osx,visualstudiocode,emacs
 
 ### Emacs ###
 # -*- mode: gitignore; -*-
@@ -53,6 +53,34 @@ flycheck_*.el
 /network-security.data
 
 
+### OSX ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
 ### VisualStudioCode ###
 .vscode/*
 !.vscode/settings.json
@@ -64,4 +92,8 @@ flycheck_*.el
 # Ignore all local history of files
 .history
 
-# End of https://www.gitignore.io/api/emacs,visualstudiocode
+
+old/*
+
+# End of https://www.gitignore.io/api/osx,visualstudiocode,emacs
+de1-daybreak.code-workspace

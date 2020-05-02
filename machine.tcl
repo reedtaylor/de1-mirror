@@ -118,7 +118,7 @@ array set ::de1 {
 	pour_volume 0
 	water_time_min 1
 	steam_time_min 1
-	steam_time_max 120
+	steam_time_max 250
 	last_ping 0
 	steam_heater_temperature 150
 }
@@ -130,16 +130,61 @@ if {[de1plus]} {
 }
 
 
-if {$android == 0 && $undroid == 0} {
+if {$zx != "android" && $runtime != "undroid"} {
 	package require tkblt
 }
 
-if {$android == 0 || $undroid == 1} {
+if {$runtime != "android" || $runtime == "undroid"} {
 	# no 'borg' or 'ble' commands, so emulate
     android_specific_stubs
 }
 
 
+array set ::de1_serial_commands_to_command_names {
+	A Versions
+	B RequestedState
+	C SetTime
+ 	D ShotDirectory
+	E ReadFromMMR
+	F WriteToMMR
+	G ShotMapRequest
+	H DeleteShotRange
+	I FWMapRequest
+	J Temperatures
+	K ShotSettings
+	L DeprecatedShotDesc
+	M ShotSample
+	N StateInfo
+	O HeaderWrite
+	P FrameWrite
+	Q WaterLevels
+	R Calibration
+}
+
+array set ::de1_command_names_to_serial_commands [reverse_array ::de1_serial_commands]
+
+array set ::de1_cuuids_to_serial_command_names {
+	"0000A001-0000-1000-8000-00805F9B34FB" Versions
+	"0000A002-0000-1000-8000-00805F9B34FB" RequestedState
+	"0000A003-0000-1000-8000-00805F9B34FB" SetTime
+	"0000A004-0000-1000-8000-00805F9B34FB" ShotDirectory
+	"0000A005-0000-1000-8000-00805F9B34FB" ReadFromMMR
+	"0000A006-0000-1000-8000-00805F9B34FB" WriteToMMR
+	"0000A007-0000-1000-8000-00805F9B34FB" ShotMapRequest
+	"0000A008-0000-1000-8000-00805F9B34FB" DeleteShotRange
+	"0000A009-0000-1000-8000-00805F9B34FB" FWMapRequest
+	"0000A00A-0000-1000-8000-00805F9B34FB" Temperatures
+	"0000A00B-0000-1000-8000-00805F9B34FB" ShotSettings
+	"0000A00C-0000-1000-8000-00805F9B34FB" DeprecatedShotDesc
+	"0000A00D-0000-1000-8000-00805F9B34FB" ShotSample
+	"0000A00E-0000-1000-8000-00805F9B34FB" StateInfo
+	"0000A00F-0000-1000-8000-00805F9B34FB" HeaderWrite
+	"0000A010-0000-1000-8000-00805F9B34FB" FrameWrite
+	"0000A011-0000-1000-8000-00805F9B34FB" WaterLevels
+	"0000A012-0000-1000-8000-00805F9B34FB" Calibration
+}
+
+array set ::de1_command_names_to_cuuids [reverse_array ::de1_serial_commands]
 
 
 #namespace import blt::*
@@ -368,7 +413,7 @@ if {[de1plus]} {
 	set ::settings(skin) "Insight"
 }
 
-if {$::android != 1} {
+if {$::connectivity == "mock"} {
 	set ::settings(ghc_is_installed) 0
 }
 
@@ -474,7 +519,7 @@ proc start_refill_kit {} {
 	set ::de1(timer) 0
 	set ::de1(volume) 0
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(Refill)\x5"]
@@ -496,7 +541,7 @@ proc start_decaling {} {
 	set ::de1(volume) 0
 	de1_send_state "descale" $::de1_state(Descale)
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(Descale)\x5"]
@@ -511,7 +556,7 @@ proc start_air_purge {} {
 	set ::de1(volume) 0
 	de1_send_state "air purge" $::de1_state(AirPurge)
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(AirPurge)\x5"]
@@ -527,7 +572,7 @@ proc start_cleaning {} {
 	set ::de1(volume) 0
 	de1_send_state "descale" $::de1_state(Clean)
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(Clean)\x5"]
@@ -536,13 +581,13 @@ proc start_cleaning {} {
 
 
 proc reset_gui_starting_hot_water_rinse {} {
-	msg "Tell DE1 to start HOT WATER RINSE"
+	#msg "Tell DE1 to start HOT WATER RINSE"
 	set ::de1(timer) 0
 	set ::de1(volume) 0
 }
 
 proc start_hot_water_rinse {} {
-	msg "Tell DE1 to start HOT WATER RINSE"
+	msg "Tell DE1 to start HOT WATER RINSE (flush)"
 	de1_send_state "hot water rinse" $::de1_state(HotWaterRinse)
 
 	if {$::settings(ghc_is_installed) == 3} {
@@ -552,7 +597,7 @@ proc start_hot_water_rinse {} {
 	}
 
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		after 200 [list update_de1_state "$::de1_state(HotWaterRinse)\x5"]
 		after 10000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -565,7 +610,7 @@ proc start_steam_rinse {} {
 	set ::de1(volume) 0
 	de1_send_state "steam rinse" $::de1_state(SteamRinse)
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		after 200 [list update_de1_state "$::de1_state(SteamRinse)\x5"]
 	}
@@ -601,7 +646,7 @@ proc start_steam {} {
 		set ::idle_next_step start_steam
 	}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		after 200 [list update_de1_state "$::de1_state(Steam)\x5"]
 		after 10000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -689,7 +734,7 @@ proc start_espresso {} {
 		return
 	}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(espresso_max_time)}] {page_display_change "espresso" "off"}
 		after 200 [list update_de1_state "$::de1_state(Espresso)\x1"]
 		after 30000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -717,7 +762,7 @@ proc start_water {} {
 	}
 
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(water_max_time)}] {page_display_change "water" "off"}
 		after 200 [list update_de1_state "$::de1_state(HotWater)\x5"]
 		after 10000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -732,10 +777,6 @@ proc start_water {} {
 
 proc start_idle {} {
 	msg "Tell DE1 to start to go IDLE (and stop whatever it is doing)"
-
-	if {$::de1(scale_device_handle) == 0 && $::settings(scale_bluetooth_address) != ""} {
-		ble_connect_to_scale
-	}
 
 	if {$::de1(device_handle) == 0} {
 		update_de1_state "$::de1_state(Idle)\x0"
@@ -765,9 +806,14 @@ proc start_idle {} {
 		#scale_enable_lcd
 	}
 
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(water_max_time)}] {page_display_change "water" "off"}
 		after 200 [list update_de1_state "$::de1_state(Idle)\x0"]
+	}
+
+	# moved the scale reconnect to be after the other commands, because otherwise a scale disconnected would interrupt the IDLE command
+	if {$::de1(scale_device_handle) == 0 && $::settings(scale_bluetooth_address) != "" && [ifexists ::currently_connecting_de1_handle] == 0} {
+		ble_connect_to_scale
 	}
 
 	#msg "sensors: [borg sensor list]"
@@ -813,7 +859,7 @@ proc start_sleep {} {
 	}
 
 	
-	if {$::android == 0} {
+	if {$::connectivity == "mock"} {
 		#after [expr {1000 * $::settings(water_max_time)}] {page_display_change "water" "off"}
 		after 200 [list update_de1_state "$::de1_state(GoingToSleep)\x0"]
 		after 800 [list update_de1_state "$::de1_state(Sleep)\x0"]

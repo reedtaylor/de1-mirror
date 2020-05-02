@@ -7,8 +7,8 @@ package provide de1_updater 1.0
 
 proc determine_if_android {} {
 
-    set ::android 0
-    set ::undroid 0
+    set ::runtime "default"
+    set ::connectivity "mock"
 
     catch {
         package require BLT
@@ -16,19 +16,19 @@ proc determine_if_android {} {
         namespace import -force blt::tile::*
 
         #sdltk android
-        set ::undroid 1
+        set ::runtime "undroid"
 
         package require ble
-        set ::undroid 0
-        set ::android 1
+        set ::runtime "android"
     }
 
-    if {$::android == 1 || $::undroid == 1} {
+    if {$::runtime == "android" || $::runtime == "undroid"} {
         # turn the background window black as soon as possible
         # and then make it full screen on android/undroid, so as to prepare for the loading of the splash screen
         # and also to remove the displaying of the Tcl/Tk app bar, which looks weird being on Android
         . configure -bg black -bd 0
         wm attributes . -fullscreen 1
+        set ::some_droid 1
     }
 
 }
@@ -123,8 +123,7 @@ proc write_file {filename data} {
 
 proc percent20encode {in} {
     set out $in
-    regsub -all " " $out "%20" out
-    #regsub -all "&" $out "%26" out
+    regsub -all " " out "%20" out
     regsub -all {"} $out "%22" out
     regsub -all {#} $out "%23" out
     regsub -all {'} $out "%27" out
@@ -401,7 +400,7 @@ proc start_app_update {} {
 
     set ::app_updating 1
 
-    if {$::android == 1} {
+    if {$::runtime == "android"} {
         if {[borg networkinfo] == "none"} {
             set ::de1(app_update_button_label) [translate "No Wifi network"]; 
 
