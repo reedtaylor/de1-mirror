@@ -49,8 +49,7 @@ proc Double2Fraction { dbl {eps 0.000001}} {
 
 proc photoscale {img sx {sy ""} } {
 
-# TODO(REED) undroids in this file
-	if {($::runtime == "android" && $::undroid != 1)} {
+	if {($::runtime == "android" && $::runtime != "undroid")} {
 		#photoscale_not_android $img $sx $sy
 		photoscale_android $img $sx $sy
 	} elseif {$::runtime == "undroid"} {
@@ -258,7 +257,7 @@ proc translate_coordinates_finger_down_x { x } {
 }
 proc translate_coordinates_finger_down_y { y } {
 
-	if {$::android == 1} {
+	if {$::runtime == "android"} {
 	 	return [expr {$y * [winfo screenheight .] / 10000}]
 	 }
 	 return $y
@@ -600,8 +599,8 @@ proc platform_button_press {} {
 }
 
 proc platform_button_long_press {} {
-	global android 
-	if {$android == 1} {
+	global runtime 
+	if {$runtime == "android"} {
 		#return {<<FingerUp>>}
 		return {<ButtonPress-3>}
 	}

@@ -9,6 +9,8 @@ proc determine_if_android {} {
 
     set ::runtime "default"
     set ::connectivity "mock"
+    set ::some_droid 0
+
 
     catch {
         package require BLT
@@ -123,7 +125,8 @@ proc write_file {filename data} {
 
 proc percent20encode {in} {
     set out $in
-    regsub -all " " out "%20" out
+    regsub -all " " $out "%20" out
+    #regsub -all "&" $out "%26" out
     regsub -all {"} $out "%22" out
     regsub -all {#} $out "%23" out
     regsub -all {'} $out "%27" out

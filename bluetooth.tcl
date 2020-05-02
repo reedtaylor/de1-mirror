@@ -515,7 +515,6 @@ proc mmr_available_DEPRECATED_BY_COMMS {} {
 	return $::de1(mmr_enabled)
 }
 
-
 proc de1_enable_mmr_notifications_DEPRECATED_BY_COMMS {} {
 
 	if {[mmr_available] == 0} {
@@ -582,7 +581,7 @@ proc fwfile_DEPRECATED_BY_COMMS {} {
 
 proc start_firmware_update_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
-		if {$::android == 1} {			
+		if {$::android == 1} {
 			msg "DE1 not connected, cannot send BLE command 10"
 			return
 		}

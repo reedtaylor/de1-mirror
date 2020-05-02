@@ -15,7 +15,6 @@ proc setup_environment {} {
     global screen_size_width
     global screen_size_height
     global fontm
-# TODO(REED) decide whether we are doing global x vs ::x and clean up (probably ::)
     global runtime 
     global connectivity
 
@@ -1207,8 +1206,8 @@ proc round_date_to_nearest_day {now} {
 
 # from Barney  https://3.basecamp.com/3671212/buckets/7351439/documents/2208672342#__recording_2349428596
 proc load_font {name fn pcsize {androidsize {}} } {
-    set familyname ""
     # calculate font size
+    set familyname ""
     if {($::runtime == "android" || $::runtime == "undroid") && $androidsize != ""} {
         set pcsize $androidsize
     }

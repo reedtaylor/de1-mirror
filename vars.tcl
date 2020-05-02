@@ -1649,7 +1649,11 @@ proc fill_ble_listbox {} {
 #	set ble_ids [list "C1:80:A7:32:CD:A3" "C5:80:EC:A5:F9:72" "F2:C3:43:60:AB:F5"]
 	#lappend ::de1_bluetooth_list $address
 
-	if {$::connectivity != "BLE"} {	
+# REED to JOHN: I am interpreting this as "fill in dummy scale data for a non-real config" but
+# (a) I'm not confident that's exactly right, and (b) this doesn't do anything anyway (all
+# lines commented out)... I think this dummy data now comes from proc scanning_restart in bluetooth.tcl.
+# So - whatever, I guess?
+	if {$::connectivity == "mock"} {	
 		#set ::scale_bluetooth_list [list "C1:80:A7:32:CD:A3" "C5:80:EC:A5:F9:72" "F2:C3:43:60:AB:F5"]
 		#set ::de1_bluetooth_list ""
 	}

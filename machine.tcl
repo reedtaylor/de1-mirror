@@ -130,11 +130,11 @@ if {[de1plus]} {
 }
 
 
-if {$zx != "android" && $runtime != "undroid"} {
+if {$::runtime != "android" && $::runtime != "undroid"} {
 	package require tkblt
 }
 
-if {$runtime != "android" || $runtime == "undroid"} {
+if {$::runtime != "android" || $::runtime == "undroid"} {
 	# no 'borg' or 'ble' commands, so emulate
     android_specific_stubs
 }
