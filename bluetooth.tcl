@@ -1610,6 +1610,7 @@ proc de1_ble_handler { event data } {
 					if {$address == $::settings(bluetooth_address)} {
 					    # fall back to scanning
 					    
+#TODO(REED) call comms disconnect handler for most
 			    		set ::de1(wrote) 0
 			    		set ::de1(cmdstack) {}
 				    	if {$::de1(device_handle) != 0} {
@@ -1683,6 +1684,8 @@ proc de1_ble_handler { event data } {
 					if {$::scanning > 0} {
 
 						if {$::de1(device_handle) == 0 && $::currently_connecting_de1_handle == 0} {
+							# TODO(REED) is there an analog to this for non ble?
+							# also check do I need to call ble_ or a non-ble
 							ble_connect_to_de1
 						}
 
@@ -1700,6 +1703,7 @@ proc de1_ble_handler { event data } {
 					if {$::de1(device_handle) == 0 && $address == $::settings(bluetooth_address)} {
 						msg "de1 connected $event $data"
 
+# TODO(REED) call comms connect handler instead of this
 						if {$::settings(scale_bluetooth_address) != ""} {
 							ble_connect_to_scale
 						}
@@ -1862,8 +1866,10 @@ proc de1_ble_handler { event data } {
 				} elseif {$state eq "connected"} {
 
 				    if {$access eq "r" || $access eq "c"} {
+# TODO(REED)  this is the de1 event handling code for BLE
 				    	#msg "rc: $data"
 				    	if {$access eq "r"} {
+# TODO(REED) figure out this diference
 				    		set ::de1(wrote) 0
 				    		run_next_userdata_cmd
 				    	}

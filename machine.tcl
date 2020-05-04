@@ -140,7 +140,7 @@ if {$::runtime != "android" || $::runtime == "undroid"} {
 }
 
 
-array set ::de1_serial_commands_to_command_names {
+array set ::de1_serial_handles_to_command_names {
 	A Versions
 	B RequestedState
 	C SetTime
@@ -161,9 +161,9 @@ array set ::de1_serial_commands_to_command_names {
 	R Calibration
 }
 
-array set ::de1_command_names_to_serial_commands [reverse_array ::de1_serial_commands]
+array set ::de1_command_names_to_serial_handles [reverse_array ::de1_serial_handles_to_command_names]
 
-array set ::de1_cuuids_to_serial_command_names {
+array set ::de1_cuuids_to_command_names {
 	"0000A001-0000-1000-8000-00805F9B34FB" Versions
 	"0000A002-0000-1000-8000-00805F9B34FB" RequestedState
 	"0000A003-0000-1000-8000-00805F9B34FB" SetTime
@@ -184,7 +184,7 @@ array set ::de1_cuuids_to_serial_command_names {
 	"0000A012-0000-1000-8000-00805F9B34FB" Calibration
 }
 
-array set ::de1_command_names_to_cuuids [reverse_array ::de1_serial_commands]
+array set ::de1_command_names_to_cuuids [reverse_array ::de1_cuuids_to_command_names]
 
 
 #namespace import blt::*
