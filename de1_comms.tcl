@@ -950,11 +950,10 @@ proc de1_disconnect_handler {} {
 	set ::de1(wrote) 0
 	set ::de1(cmdstack) {}
 
-	# maybe keep this stuff?
 	set ::currently_connecting_de1_handle 0
 	msg "de1 disconnected"
 
-	# interesting idea - use these device_handle variables to hold the filehandle etc?
+# TODO(REED)  use these device_handle variables to hold the filehandle etc?
 	if {$::de1(device_handle) != 0} {
 		# TODO(REED) need this to be not just ble
 		ble close $::de1(device_handle)
@@ -966,6 +965,7 @@ proc de1_disconnect_handler {} {
 	}
 	set ::de1(device_handle) 0
 
+# TODO(REED) more "get rid of ble" edits
 	set ::settings(max_ble_connect_attempts) 10
 
 		# TODO(REED) need this to be not just ble (possibly cosmetic)
@@ -979,13 +979,12 @@ proc de1_disconnect_handler {} {
 
 		update_de1_state "$::de1_state(Sleep)\x0"
 	} else {
-		ble_connect_to_de1
+		connect_to_de1
 	}
-
 }
 
-de1_connnect_handler {} {
-	#TODO(REED) handle comes from somewhere
+de1_connnect_handler { handle address } {
+#TODO(REED) make sure $handle and $address come from somewhere in non-BLE cases
 	incr ::successful_de1_connection_count
 	set ::failed_attempt_count_connecting_to_de1 0
 
@@ -1023,241 +1022,166 @@ de1_connnect_handler {} {
 		read_de1_state
 		
 		after 2000 de1_enable_state_notifications
-
-		#after 5000 later_new_de1_connection_setup
-
-		# john 02-16-19 need to make this pair in android bluetooth settings -- not working yet
-		#catch {
-		#	if {$::settings(ble_unpair_at_exit) == 0} {
-		#		ble pair $::settings(bluetooth_address)
-		#	}
-		#}
-
-		#ble pair $::settings(bluetooth_address)
-
-		#after 2000 "; ; ; "
-		#poll_de1_state
-		#start_idle
-		#after 2000 de1_enable_calibration_notifications
-		#after 3000 de1_read_calibration "temperature"
 	}
 }
 
-proc de1_event_handler { command_name access data } {
+proc de1_event_handler { command_name data } {
 	set previous_wrote 0
 	set previous_wrote [ifexists ::de1(wrote)]
 
-	# TODO(REED) figure out if there's an analog for this if statement in a non-BLE context
-	# otherwise may need to find a different outer loop for calling run_next
-	# note that in the old demo code I don't think I ever forced an "r" so this may be superfluous
-	# outside BLE
-	if {$access eq "r" || $access eq "c"} {
-		if {$access eq "r"} {
-			set ::de1(wrote) 0
-			run_next_userdata_cmd
+	#msg "Received from DE1: '[remove_null_terminator $value]'"
+	# change notification or read request
+	#de1_ble_new_value $cuuid $value
+	# change notification or read request
+	#de1_ble_new_value $cuuid $value
+
+
+	if {$command_name == ShotSample} {
+		set ::de1(last_ping) [clock seconds]
+		set results [update_de1_shotvalue $value]
+		#msg "Shotvalue received: $results" 
+		#set ::de1(wrote) 0
+		#run_next_userdata_cmd
+		set do_this 0
+		if {$do_this == 1} {
+			# this tries to handle bad write situations, but it might have side effects if it is not working correctly.
+			# probably this should be adding a command to the top of the write queue
+			if {$previous_wrote == 1} {
+				msg "bad write reported"
+				{*}$::de1(previouscmd)
+				set ::de1(wrote) 1
+				return
+			}
 		}
+	} elseif {$command_name == Versions} {
+		set ::de1(last_ping) [clock seconds]
+		#update_de1_state $value
+		parse_binary_version_desc $value arr2
+		msg "version data received [string length $value] bytes: '$value' \"[convert_string_to_hex $value]\"  : '[array get arr2]'/ $event $data"
+		set ::de1(version) [array get arr2]
 
-		#msg "Received from DE1: '[remove_null_terminator $value]'"
-		# change notification or read request
-		#de1_ble_new_value $cuuid $value
-		# change notification or read request
-		#de1_ble_new_value $cuuid $value
+		# run stuff that depends on the BLE API version
+		later_new_de1_connection_setup
 
-
-		if {$command_name == ShotSample} {
-			set ::de1(last_ping) [clock seconds]
-			set results [update_de1_shotvalue $value]
-			#msg "Shotvalue received: $results" 
-			#set ::de1(wrote) 0
-			#run_next_userdata_cmd
-			set do_this 0
-			if {$do_this == 1} {
-				# this tries to handle bad write situations, but it might have side effects if it is not working correctly.
-				# probably this should be adding a command to the top of the write queue
-				if {$previous_wrote == 1} {
-					msg "bad write reported"
-					{*}$::de1(previouscmd)
-					set ::de1(wrote) 1
-					return
-				}
-			}
-		} elseif {$command_name == Versions} {
-			set ::de1(last_ping) [clock seconds]
-			#update_de1_state $value
-			parse_binary_version_desc $value arr2
-			msg "version data received [string length $value] bytes: '$value' \"[convert_string_to_hex $value]\"  : '[array get arr2]'/ $event $data"
-			set ::de1(version) [array get arr2]
-
-			# run stuff that depends on the BLE API version
-			later_new_de1_connection_setup
-
-			set ::de1(wrote) 0
-			run_next_userdata_cmd
-
-		} elseif {$command_name == Calibration} {
-			#set ::de1(last_ping) [clock seconds]
-			calibration_received $value
-		} elseif {$command_name == WaterLevels} {
-			set ::de1(last_ping) [clock seconds]
-			parse_binary_water_level $value arr2
-			#msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
-
-			# compensate for the fact that we measure water level a few mm higher than the water uptake point
-			set mm [expr {$arr2(Level) + $::de1(water_level_mm_correction)}]
-			set ::de1(water_level) $mm
-			
-		} elseif {$command_name == FWMapRequest} {
-			#set ::de1(last_ping) [clock seconds]
-			parse_map_request $value arr2
-			if {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 0} {
-				msg "BLE recv: finished erasing fw '[ifexists arr2(FWToMap)]'"
-				set ::de1(currently_erasing_firmware) 0
-				write_firmware_now
-			} elseif {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 1} { 
-				msg "BLE recv: currently erasing fw '[ifexists arr2(FWToMap)]'"
-			} elseif {$::de1(currently_erasing_firmware) == 0 && [ifexists arr2(FWToErase)] == 0} { 
-				msg "BLE firmware find error BLE recv: '$value' [array get arr2]'"
-		
-				if {[ifexists arr2(FirstError1)] == [expr 0xFF] && [ifexists arr2(FirstError2)] == [expr 0xFF] && [ifexists arr2(FirstError3)] == [expr 0xFD]} {
-					set ::de1(firmware_update_button_label) "Updated"
-				} else {
-					set ::de1(firmware_update_button_label) "Update failed"
-				}
-				set ::de1(currently_updating_firmware) 0
-
-			} else {
-				msg "unknown firmware cmd ack recved: [string length $value] bytes: $value : [array get arr2]"
-			}
-		} elseif {$command_name == ShotSettings} {
-			set ::de1(last_ping) [clock seconds]
-			#update_de1_state $value
-			parse_binary_hotwater_desc $value arr2
-			msg "hotwater data received [string length $value] bytes: $value  : [array get arr2]"
-
-			#update_de1_substate $value
-			#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
-		} elseif {$command_name == DeprecatedShotDesc} {
-			set ::de1(last_ping) [clock seconds]
-			#update_de1_state $value
-			parse_binary_shot_desc $value arr2
-			msg "shot data received [string length $value] bytes: $value  : [array get arr2]"
-		} elseif {$command_name = HeaderWrite} {
-			set ::de1(last_ping) [clock seconds]
-			#update_de1_state $value
-			parse_binary_shotdescheader $value arr2
-			msg "READ shot header success: [string length $value] bytes: $value  : [array get arr2]"
-		} elseif {$command_name == FrameWrite} {
-			set ::de1(last_ping) [clock seconds]
-			#update_de1_state $value
-			parse_binary_shotframe $value arr2
-			msg "shot frame received [string length $value] bytes: $value  : [array get arr2]"
-		} elseif {$command_name == StateInfo} {
-			set ::de1(last_ping) [clock seconds]
-			update_de1_state $value
-
-			#if {[info exists ::globals(if_in_sleep_move_to_idle)] == 1} {
-			#	unset ::globals(if_in_sleep_move_to_idle)
-			#	if {$::de1_num_state($::de1(state)) == "Sleep"} {
-					# when making a new connection to the espresso machine, if the machine is currently asleep, then take it out of sleep
-					# but only do this check once, right after connection establisment
-			#		start_idle
-			#	}
-			#}
-			#update_de1_substate $value
-			#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
-			set ::de1(wrote) 0
-			run_next_userdata_cmd
-
-		} elseif {$command_name == HeaderWrite} {
-			msg "error"
-			#update_de1_state $value
-			#msg "Confirmed a00f read from DE1: '[remove_null_terminator $value]'"
-		} elseif {$command_name == ReadFromMMR} {
-			# MMR read
-			msg "MMR recv read: '[convert_string_to_hex $value]'"
-
-			parse_binary_mmr_read $value arr
-			set mmr_id $arr(Address)
-			set mmr_val [ifexists arr(Data0)]
-			msg "MMR recv read from $mmr_id ($mmr_val): '[convert_string_to_hex $value]' : [array get arr]"
-			if {$mmr_id == "80381C"} {
-				msg "Read: GHC is installed: '$mmr_val'"
-				set ::settings(ghc_is_installed) $mmr_val
-
-				if {$::settings(ghc_is_installed) == 1 || $::settings(ghc_is_installed) == 2} {
-					# if the GHC is present but not active, check back every 10 minutes to see if its status has changed
-					# this is only relevant if the machine is in a debug GHC mode, where the DE1 acts as if the GHC 
-					# is not there until it is touched. This allows the tablet to start operations.  If (or once) the GHC is 
-					# enabled, only the GHC can start operations.
-					after 600000 get_ghc_is_installed
-				}
-
-			} elseif {$mmr_id == "803808"} {
-				set ::de1(fan_threshold) $mmr_val
-				set ::settings(fan_threshold) $mmr_val
-				msg "Read: Fan threshold: '$mmr_val'"
-			} elseif {$mmr_id == "80380C"} {
-				msg "Read: tank temperature threshold: '$mmr_val'"
-				set ::de1(tank_temperature_threshold) $mmr_val
-			} elseif {$mmr_id == "803820"} {
-				msg "Read: group head control mode: '$mmr_val'"
-				set ::settings(ghc_mode) $mmr_val
-			} elseif {$mmr_id == "803828"} {
-				msg "Read: steam flow: '$mmr_val'"
-				set ::settings(steam_flow) $mmr_val
-			} elseif {$mmr_id == "80382C"} {
-				msg "Read: steam_highflow_start: '$mmr_val'"
-				set ::settings(steam_highflow_start) $mmr_val
-			} else {
-				msg "Uknown type of direct MMR read on '[convert_string_to_hex $mmr_id]': $data"
-			}
-
-		} else {
-			msg "Confirmed unknown read from DE1 $command_name : '$value'"
-		}
-	} elseif {$access eq "w"} {
-# TODO(REED) figure out if this stuff should collapse up (and we get rid of the $access param)
-# or if they are meaningfully different on some commands, in which case how is the BLE adaptor knowing
-# which one the FW is asking it to send
 		set ::de1(wrote) 0
 		run_next_userdata_cmd
 
-		if {$command_name == ReadFromMMR} {
-			# MMR read
-			msg "MMR read: '[convert_string_to_hex $value]'"
-		} elseif {$command_name == FrameWrite} {
-			parse_binary_shotframe $value arr3				    		
-			msg "Confirmed shot frame written to DE1: '$value' : [array get arr3]"
-		} elseif {$command_name == WaterLevels} {
-			parse_binary_water_level $value arr2
-			msg "water level write confirmed [string length $value] bytes: $value  : [array get arr2]"
-		} else {
-			if {$command_name == RequestedState} {  
-				parse_state_change $value arr
-				msg "Confirmed state change written to DE1: '[array get arr]'"
-			} elseif {$command_name == WriteToMMR} {
-				if {$::de1(currently_erasing_firmware) == 1 || $::de1(currently_updating_firmware) == 1} {
-					msg "firmware write ack recved: [string length $value] bytes: $value : [array get arr2]"
-					firmware_upload_next
-				} else {
-					msg "MMR write ack: [string length $value] bytes: [convert_string_to_hex $value ] : $value : [array get arr2]"
-				}
-			} else {
-				msg "Confirmed wrote to $command_name of DE1: '$value'"
-			}
-		}
-		
-		#set ::de1(wrote) 0
+	} elseif {$command_name == Calibration} {
+		#set ::de1(last_ping) [clock seconds]
+		calibration_received $value
+	} elseif {$command_name == WaterLevels} {
+		set ::de1(last_ping) [clock seconds]
+		parse_binary_water_level $value arr2
+		#msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
 
-		# change notification or read request
-		#de1_ble_new_value $cuuid $value
+		# compensate for the fact that we measure water level a few mm higher than the water uptake point
+		set mm [expr {$arr2(Level) + $::de1(water_level_mm_correction)}]
+		set ::de1(water_level) $mm
+		
+	} elseif {$command_name == FWMapRequest} {
+		#set ::de1(last_ping) [clock seconds]
+		parse_map_request $value arr2
+		if {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 0} {
+			msg "BLE recv: finished erasing fw '[ifexists arr2(FWToMap)]'"
+			set ::de1(currently_erasing_firmware) 0
+			write_firmware_now
+		} elseif {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 1} { 
+			msg "BLE recv: currently erasing fw '[ifexists arr2(FWToMap)]'"
+		} elseif {$::de1(currently_erasing_firmware) == 0 && [ifexists arr2(FWToErase)] == 0} { 
+			msg "BLE firmware find error BLE recv: '$value' [array get arr2]'"
+	
+			if {[ifexists arr2(FirstError1)] == [expr 0xFF] && [ifexists arr2(FirstError2)] == [expr 0xFF] && [ifexists arr2(FirstError3)] == [expr 0xFD]} {
+				set ::de1(firmware_update_button_label) "Updated"
+			} else {
+				set ::de1(firmware_update_button_label) "Update failed"
+			}
+			set ::de1(currently_updating_firmware) 0
+
+		} else {
+			msg "unknown firmware cmd ack recved: [string length $value] bytes: $value : [array get arr2]"
+		}
+	} elseif {$command_name == ShotSettings} {
+		set ::de1(last_ping) [clock seconds]
+		#update_de1_state $value
+		parse_binary_hotwater_desc $value arr2
+		msg "hotwater data received [string length $value] bytes: $value  : [array get arr2]"
+
+		#update_de1_substate $value
+		#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
+	} elseif {$command_name == DeprecatedShotDesc} {
+		set ::de1(last_ping) [clock seconds]
+		#update_de1_state $value
+		parse_binary_shot_desc $value arr2
+		msg "shot data received [string length $value] bytes: $value  : [array get arr2]"
+	} elseif {$command_name = HeaderWrite} {
+		set ::de1(last_ping) [clock seconds]
+		#update_de1_state $value
+		parse_binary_shotdescheader $value arr2
+		msg "READ shot header success: [string length $value] bytes: $value  : [array get arr2]"
+	} elseif {$command_name == FrameWrite} {
+		set ::de1(last_ping) [clock seconds]
+		#update_de1_state $value
+		parse_binary_shotframe $value arr2
+		msg "shot frame received [string length $value] bytes: $value  : [array get arr2]"
+	} elseif {$command_name == StateInfo} {
+		set ::de1(last_ping) [clock seconds]
+		update_de1_state $value
+
+		#if {[info exists ::globals(if_in_sleep_move_to_idle)] == 1} {
+		#	unset ::globals(if_in_sleep_move_to_idle)
+		#	if {$::de1_num_state($::de1(state)) == "Sleep"} {
+				# when making a new connection to the espresso machine, if the machine is currently asleep, then take it out of sleep
+				# but only do this check once, right after connection establisment
+		#		start_idle
+		#	}
+		#}
+		#update_de1_substate $value
+		#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
+		set ::de1(wrote) 0
+		run_next_userdata_cmd
+	} elseif {$command_name == ReadFromMMR} {
+		# MMR read
+		msg "MMR recv read: '[convert_string_to_hex $value]'"
+
+		parse_binary_mmr_read $value arr
+		set mmr_id $arr(Address)
+		set mmr_val [ifexists arr(Data0)]
+		msg "MMR recv read from $mmr_id ($mmr_val): '[convert_string_to_hex $value]' : [array get arr]"
+		if {$mmr_id == "80381C"} {
+			msg "Read: GHC is installed: '$mmr_val'"
+			set ::settings(ghc_is_installed) $mmr_val
+
+			if {$::settings(ghc_is_installed) == 1 || $::settings(ghc_is_installed) == 2} {
+				# if the GHC is present but not active, check back every 10 minutes to see if its status has changed
+				# this is only relevant if the machine is in a debug GHC mode, where the DE1 acts as if the GHC 
+				# is not there until it is touched. This allows the tablet to start operations.  If (or once) the GHC is 
+				# enabled, only the GHC can start operations.
+				after 600000 get_ghc_is_installed
+			}
+
+		} elseif {$mmr_id == "803808"} {
+			set ::de1(fan_threshold) $mmr_val
+			set ::settings(fan_threshold) $mmr_val
+			msg "Read: Fan threshold: '$mmr_val'"
+		} elseif {$mmr_id == "80380C"} {
+			msg "Read: tank temperature threshold: '$mmr_val'"
+			set ::de1(tank_temperature_threshold) $mmr_val
+		} elseif {$mmr_id == "803820"} {
+			msg "Read: group head control mode: '$mmr_val'"
+			set ::settings(ghc_mode) $mmr_val
+		} elseif {$mmr_id == "803828"} {
+			msg "Read: steam flow: '$mmr_val'"
+			set ::settings(steam_flow) $mmr_val
+		} elseif {$mmr_id == "80382C"} {
+			msg "Read: steam_highflow_start: '$mmr_val'"
+			set ::settings(steam_highflow_start) $mmr_val
+		} else {
+			msg "Uknown type of direct MMR read on '[convert_string_to_hex $mmr_id]': $data"
+		}
 
 	} else {
-		msg "weird command received: $data"
+		msg "Unknown command $command_name : '$value'"
 	}
-
-	#run_next_userdata_cmd
-	#run_next_userdata_cmd
 }
 
 proc calibration_received {value} {

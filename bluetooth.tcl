@@ -1544,8 +1544,9 @@ proc de1_ble_handler { event data } {
 	#set ::de1(wrote) 0
 	#msg "ble event: $event $data"
 
-	set previous_wrote 0
-	set previous_wrote [ifexists ::de1(wrote)]
+### MOVED TO COMMS
+###	set previous_wrote 0
+###	set previous_wrote [ifexists ::de1(wrote)]
 	#set ::de1(wrote) 0
 
 	#set ::de1(last_ping) [clock seconds]
@@ -1609,39 +1610,39 @@ proc de1_ble_handler { event data } {
 				if {$state eq "disconnected"} {
 					if {$address == $::settings(bluetooth_address)} {
 					    # fall back to scanning
-					    
-#TODO(REED) call comms disconnect handler for most
-			    		set ::de1(wrote) 0
-			    		set ::de1(cmdstack) {}
-				    	if {$::de1(device_handle) != 0} {
-						    ble close $::de1(device_handle)
-						}
-
-						catch {
-					    	ble close $::currently_connecting_de1_handle
-					    }
-
-					    set ::currently_connecting_de1_handle 0
-
-					    msg "de1 disconnected"
-					    set ::de1(device_handle) 0
-
-					    # temporarily disable this feature as it's not clear that it's needed.
-					    #set ::settings(max_ble_connect_attempts) 99999999
-					    set ::settings(max_ble_connect_attempts) 10
-					    
-					    incr ::failed_attempt_count_connecting_to_de1
-					    if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
-					    	# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
-					    	# and we'll try again to reconnect when the user taps the screen to leave sleep mode
-
-					    	# set this to zero so that when we come back from sleep we try several times to connect
-					    	set ::failed_attempt_count_connecting_to_de1 0
-
-					    	update_de1_state "$::de1_state(Sleep)\x0"
-					    } else {
-						    ble_connect_to_de1
-					    }
+						de1_disconnect_handler
+### MOVED TO COMMS
+###			    		set ::de1(wrote) 0
+###			    		set ::de1(cmdstack) {}
+###				    	if {$::de1(device_handle) != 0} {
+###						    ble close $::de1(device_handle)
+###						}
+###
+###						catch {
+###					    	ble close $::currently_connecting_de1_handle
+###					    }
+###
+###					    set ::currently_connecting_de1_handle 0
+###
+###					    msg "de1 disconnected"
+###					    set ::de1(device_handle) 0
+###
+###					    # temporarily disable this feature as it's not clear that it's needed.
+###					    #set ::settings(max_ble_connect_attempts) 99999999
+###					    set ::settings(max_ble_connect_attempts) 10
+###					    
+###					    incr ::failed_attempt_count_connecting_to_de1
+###					    if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
+###					    	# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
+###					    	# and we'll try again to reconnect when the user taps the screen to leave sleep mode
+###
+###					    	# set this to zero so that when we come back from sleep we try several times to connect
+###					    	set ::failed_attempt_count_connecting_to_de1 0
+###
+###					    	update_de1_state "$::de1_state(Sleep)\x0"
+###					    } else {
+###						    ble_connect_to_de1
+###					    }
 
 				    } elseif {$address == $::settings(scale_bluetooth_address)} {
 					
@@ -1703,66 +1704,67 @@ proc de1_ble_handler { event data } {
 					if {$::de1(device_handle) == 0 && $address == $::settings(bluetooth_address)} {
 						msg "de1 connected $event $data"
 
-# TODO(REED) call comms connect handler instead of this
 						if {$::settings(scale_bluetooth_address) != ""} {
 							ble_connect_to_scale
 						}
 
-						
-						incr ::successful_de1_connection_count
-						set ::failed_attempt_count_connecting_to_de1 0
+						de1_connect_handler $handle $address
 
-
-			    		set ::de1(wrote) 0
-			    		set ::de1(cmdstack) {}
-					    #set ::de1(found) 1
-					    set ::de1(connect_time) [clock seconds]
-					    set ::de1(last_ping) [clock seconds]
-					    set ::currently_connecting_de1_handle 0
-
-					    #msg "Connected to DE1"
-						set ::de1(device_handle) $handle
-						append_to_de1_bluetooth_list $address
-						#return
-
-
-						#msg "connected to de1 with handle $handle"
-						set testing 0
-						if {$testing == 1} {
-							de1_read_calibration "temperature"
-						} else {
-
-							#set ::globals(if_in_sleep_move_to_idle) 0
-
-							# vital stuff, do first
-							#read_de1_state
-							de1_enable_temp_notifications
-							if {[info exists ::de1(first_connection_was_made)] != 1} {
-								# on app startup, wake the machine up
-								set ::de1(first_connection_was_made) 1
-								start_idle
-							}
-							read_de1_version
-							read_de1_state
-							
-							after 2000 de1_enable_state_notifications
-
-							#after 5000 later_new_de1_connection_setup
-
-							# john 02-16-19 need to make this pair in android bluetooth settings -- not working yet
-							#catch {
-							#	if {$::settings(ble_unpair_at_exit) == 0} {
-							#		ble pair $::settings(bluetooth_address)
-							#	}
-							#}
-
-							#ble pair $::settings(bluetooth_address)
-
-							#after 2000 "; ; ; "
-							#poll_de1_state
-							#start_idle
-							#after 2000 de1_enable_calibration_notifications
-							#after 3000 de1_read_calibration "temperature"
+### MOVED TO COMMS						
+###						incr ::successful_de1_connection_count
+###						set ::failed_attempt_count_connecting_to_de1 0
+###
+###
+###			    		set ::de1(wrote) 0
+###			    		set ::de1(cmdstack) {}
+###					    #set ::de1(found) 1
+###					    set ::de1(connect_time) [clock seconds]
+###					    set ::de1(last_ping) [clock seconds]
+###					    set ::currently_connecting_de1_handle 0
+###
+###					    #msg "Connected to DE1"
+###						set ::de1(device_handle) $handle
+###						append_to_de1_bluetooth_list $address
+###						#return
+###
+###
+###						#msg "connected to de1 with handle $handle"
+###						set testing 0
+###						if {$testing == 1} {
+###							de1_read_calibration "temperature"
+###						} else {
+###
+###							#set ::globals(if_in_sleep_move_to_idle) 0
+###
+###							# vital stuff, do first
+###							#read_de1_state
+###							de1_enable_temp_notifications
+###							if {[info exists ::de1(first_connection_was_made)] != 1} {
+###								# on app startup, wake the machine up
+###								set ::de1(first_connection_was_made) 1
+###								start_idle
+###							}
+###							read_de1_version
+###							read_de1_state
+###							
+###							after 2000 de1_enable_state_notifications
+###
+###							#after 5000 later_new_de1_connection_setup
+###
+###							# john 02-16-19 need to make this pair in android bluetooth settings -- not working yet
+###							#catch {
+###							#	if {$::settings(ble_unpair_at_exit) == 0} {
+###							#		ble pair $::settings(bluetooth_address)
+###							#	}
+###							#}
+###
+###							#ble pair $::settings(bluetooth_address)
+###
+###							#after 2000 "; ; ; "
+###							#poll_de1_state
+###							#start_idle
+###							#after 2000 de1_enable_calibration_notifications
+###							#after 3000 de1_read_calibration "temperature"
 						}
 
 
@@ -1866,10 +1868,8 @@ proc de1_ble_handler { event data } {
 				} elseif {$state eq "connected"} {
 
 				    if {$access eq "r" || $access eq "c"} {
-# TODO(REED)  this is the de1 event handling code for BLE
 				    	#msg "rc: $data"
 				    	if {$access eq "r"} {
-# TODO(REED) figure out this diference
 				    		set ::de1(wrote) 0
 				    		run_next_userdata_cmd
 				    	}
@@ -1882,116 +1882,136 @@ proc de1_ble_handler { event data } {
 						# change notification or read request
 						#de1_ble_new_value $cuuid $value
 
+						# translate the cuuid into a comms-independent de1 command name
+						# (if possible) and pass that into the generalized event handler
+						# in de1_comms.tcl
+						if {[info exists ::de1_cuuids_to_command_names($cuuid)]} {
+							set command_name = $::de1_cuuids_to_command_names($cuuid)
+							de1_event_handler $command_name $data
+						}
+### MOVED TO COMMS (A00D == ShotSample)
+###						if {$cuuid == "0000A00D-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							set results [update_de1_shotvalue $value]
+###							#msg "Shotvalue received: $results" 
+###							#set ::de1(wrote) 0
+###							#run_next_userdata_cmd
+###							set do_this 0
+###							if {$do_this == 1} {
+###								# this tries to handle bad write situations, but it might have side effects if it is not working correctly.
+###								# probably this should be adding a command to the top of the write queue
+###								if {$previous_wrote == 1} {
+###									msg "bad write reported"
+###									{*}$::de1(previouscmd)
+###									set ::de1(wrote) 1
+###									return
+###								}
+###							}
+### MOVED TO COMMS (A001 == Versions)
+###						} elseif {$cuuid == "0000A001-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							#update_de1_state $value
+###							parse_binary_version_desc $value arr2
+###							msg "version data received [string length $value] bytes: '$value' \"[convert_string_to_hex $value]\"  : '[array get arr2]'/ $event $data"
+###							set ::de1(version) [array get arr2]
+###
+###							# run stuff that depends on the BLE API version
+###							later_new_de1_connection_setup
+###
+###							set ::de1(wrote) 0
+###							run_next_userdata_cmd
+###
+### MOVED TO COMMS (A012 == Calibration)
+###						} elseif {$cuuid == "0000A012-0000-1000-8000-00805F9B34FB"} {
+###						    #set ::de1(last_ping) [clock seconds]
+###						    calibration_received $value
+### MOVED TO COMMS (A011 == WaterLevels)
+###						} elseif {$cuuid == "0000A011-0000-1000-8000-00805F9B34FB"} {
+###							set ::de1(last_ping) [clock seconds]
+###							parse_binary_water_level $value arr2
+###							#msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
+###	
+###							# compensate for the fact that we measure water level a few mm higher than the water uptake point
+###							set mm [expr {$arr2(Level) + $::de1(water_level_mm_correction)}]
+###							set ::de1(water_level) $mm
+###							
+### MOVED TO COMMS (A009 == FwMapRequest)
+###						} elseif {$cuuid == "0000A009-0000-1000-8000-00805F9B34FB"} {
+###						    #set ::de1(last_ping) [clock seconds]
+###							parse_map_request $value arr2
+###							if {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 0} {
+###								msg "BLE recv: finished erasing fw '[ifexists arr2(FWToMap)]'"
+###								set ::de1(currently_erasing_firmware) 0
+###								write_firmware_now
+###							} elseif {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 1} { 
+###								msg "BLE recv: currently erasing fw '[ifexists arr2(FWToMap)]'"
+###							} elseif {$::de1(currently_erasing_firmware) == 0 && [ifexists arr2(FWToErase)] == 0} { 
+###								msg "BLE firmware find error BLE recv: '$value' [array get arr2]'"
+###						
+###								if {[ifexists arr2(FirstError1)] == [expr 0xFF] && [ifexists arr2(FirstError2)] == [expr 0xFF] && [ifexists arr2(FirstError3)] == [expr 0xFD]} {
+###									set ::de1(firmware_update_button_label) "Updated"
+###								} else {
+###									set ::de1(firmware_update_button_label) "Update failed"
+###								}
+###								set ::de1(currently_updating_firmware) 0
+###
+###							} else {
+###								msg "unknown firmware cmd ack recved: [string length $value] bytes: $value : [array get arr2]"
+###							}
+### MOVED TO COMMS (A00B == ShotSettings)
+###						} elseif {$cuuid == "0000A00B-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							#update_de1_state $value
+###							parse_binary_hotwater_desc $value arr2
+###							msg "hotwater data received [string length $value] bytes: $value  : [array get arr2]"
+###
+###							#update_de1_substate $value
+###							#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
+### MOVED TO COMMS (A00C == DeprecatedShotDesc)
+###						} elseif {$cuuid == "0000A00C-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							#update_de1_state $value
+###							parse_binary_shot_desc $value arr2
+###							msg "shot data received [string length $value] bytes: $value  : [array get arr2]"
+### MOVED TO COMMS (A00F == HeaderWrite)
+###						} elseif {$cuuid == "0000A00F-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							#update_de1_state $value
+###							parse_binary_shotdescheader $value arr2
+###							msg "READ shot header success: [string length $value] bytes: $value  : [array get arr2]"
+### MOVED TO COMMS (A010 == FrameWrite)
+###						} elseif {$cuuid == "0000A010-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							#update_de1_state $value
+###							parse_binary_shotframe $value arr2
+###							msg "shot frame received [string length $value] bytes: $value  : [array get arr2]"
+### MOVED TO COMMS (A00E == StateInfo)
+###						} elseif {$cuuid == "0000A00E-0000-1000-8000-00805F9B34FB"} {
+###						    set ::de1(last_ping) [clock seconds]
+###							update_de1_state $value
+###
+###							#if {[info exists ::globals(if_in_sleep_move_to_idle)] == 1} {
+###							#	unset ::globals(if_in_sleep_move_to_idle)
+###							#	if {$::de1_num_state($::de1(state)) == "Sleep"} {
+###									# when making a new connection to the espresso machine, if the machine is currently asleep, then take it out of sleep
+###									# but only do this check once, right after connection establisment
+###							#		start_idle
+###							#	}
+###							#}
+###							#update_de1_substate $value
+###							#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
+###							set ::de1(wrote) 0
+###							run_next_userdata_cmd
+###
+### REED to JOHN: did *NOT* move to comms because this is dead code -- this exact characteristic is already handled "above" 
+### and so I did not port this code over, instead I am just commenting it out
+###						} elseif {$cuuid == "0000A00F-0000-1000-8000-00805F9B34FB"} {
+###							msg "error"
+###							#update_de1_state $value
+###							#msg "Confirmed a00f read from DE1: '[remove_null_terminator $value]'"
 
-						if {$cuuid == "0000A00D-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							set results [update_de1_shotvalue $value]
-							#msg "Shotvalue received: $results" 
-							#set ::de1(wrote) 0
-							#run_next_userdata_cmd
-							set do_this 0
-							if {$do_this == 1} {
-								# this tries to handle bad write situations, but it might have side effects if it is not working correctly.
-								# probably this should be adding a command to the top of the write queue
-								if {$previous_wrote == 1} {
-									msg "bad write reported"
-									{*}$::de1(previouscmd)
-									set ::de1(wrote) 1
-									return
-								}
-							}
-						} elseif {$cuuid == "0000A001-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							#update_de1_state $value
-							parse_binary_version_desc $value arr2
-							msg "version data received [string length $value] bytes: '$value' \"[convert_string_to_hex $value]\"  : '[array get arr2]'/ $event $data"
-							set ::de1(version) [array get arr2]
-
-							# run stuff that depends on the BLE API version
-							later_new_de1_connection_setup
-
-							set ::de1(wrote) 0
-							run_next_userdata_cmd
-
-						} elseif {$cuuid == "0000A012-0000-1000-8000-00805F9B34FB"} {
-						    #set ::de1(last_ping) [clock seconds]
-						    calibration_received $value
-						} elseif {$cuuid == "0000A011-0000-1000-8000-00805F9B34FB"} {
-							set ::de1(last_ping) [clock seconds]
-							parse_binary_water_level $value arr2
-							#msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
-	
-							# compensate for the fact that we measure water level a few mm higher than the water uptake point
-							set mm [expr {$arr2(Level) + $::de1(water_level_mm_correction)}]
-							set ::de1(water_level) $mm
-							
-						} elseif {$cuuid == "0000A009-0000-1000-8000-00805F9B34FB"} {
-						    #set ::de1(last_ping) [clock seconds]
-							parse_map_request $value arr2
-							if {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 0} {
-								msg "BLE recv: finished erasing fw '[ifexists arr2(FWToMap)]'"
-								set ::de1(currently_erasing_firmware) 0
-								write_firmware_now
-							} elseif {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 1} { 
-								msg "BLE recv: currently erasing fw '[ifexists arr2(FWToMap)]'"
-							} elseif {$::de1(currently_erasing_firmware) == 0 && [ifexists arr2(FWToErase)] == 0} { 
-								msg "BLE firmware find error BLE recv: '$value' [array get arr2]'"
-						
-								if {[ifexists arr2(FirstError1)] == [expr 0xFF] && [ifexists arr2(FirstError2)] == [expr 0xFF] && [ifexists arr2(FirstError3)] == [expr 0xFD]} {
-									set ::de1(firmware_update_button_label) "Updated"
-								} else {
-									set ::de1(firmware_update_button_label) "Update failed"
-								}
-								set ::de1(currently_updating_firmware) 0
-
-							} else {
-								msg "unknown firmware cmd ack recved: [string length $value] bytes: $value : [array get arr2]"
-							}
-						} elseif {$cuuid == "0000A00B-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							#update_de1_state $value
-							parse_binary_hotwater_desc $value arr2
-							msg "hotwater data received [string length $value] bytes: $value  : [array get arr2]"
-
-							#update_de1_substate $value
-							#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
-						} elseif {$cuuid == "0000A00C-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							#update_de1_state $value
-							parse_binary_shot_desc $value arr2
-							msg "shot data received [string length $value] bytes: $value  : [array get arr2]"
-						} elseif {$cuuid == "0000A00F-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							#update_de1_state $value
-							parse_binary_shotdescheader $value arr2
-							msg "READ shot header success: [string length $value] bytes: $value  : [array get arr2]"
-						} elseif {$cuuid == "0000A010-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							#update_de1_state $value
-							parse_binary_shotframe $value arr2
-							msg "shot frame received [string length $value] bytes: $value  : [array get arr2]"
-						} elseif {$cuuid == "0000A00E-0000-1000-8000-00805F9B34FB"} {
-						    set ::de1(last_ping) [clock seconds]
-							update_de1_state $value
-
-							#if {[info exists ::globals(if_in_sleep_move_to_idle)] == 1} {
-							#	unset ::globals(if_in_sleep_move_to_idle)
-							#	if {$::de1_num_state($::de1(state)) == "Sleep"} {
-									# when making a new connection to the espresso machine, if the machine is currently asleep, then take it out of sleep
-									# but only do this check once, right after connection establisment
-							#		start_idle
-							#	}
-							#}
-							#update_de1_substate $value
-							#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
-							set ::de1(wrote) 0
-							run_next_userdata_cmd
-
-						} elseif {$cuuid == "0000A00F-0000-1000-8000-00805F9B34FB"} {
-							msg "error"
-							#update_de1_state $value
-							#msg "Confirmed a00f read from DE1: '[remove_null_terminator $value]'"
-						} elseif {$cuuid eq "83CDC3D4-3BA2-13FC-CC5E-106C351A9352"} {
+### Non-DE1 BLE characteristics start here (e.g. scales), so did not move to de1_comms.tcl
+						if {$cuuid eq "83CDC3D4-3BA2-13FC-CC5E-106C351A9352"} {
 							# decent scale
 							parse_decent_scale_recv $value vals
 							#msg "decentscale: '[array get vals]'"
@@ -2198,53 +2218,59 @@ proc de1_ble_handler { event data } {
 									}
 								}
 							}
-			    		} elseif {$cuuid == $::de1(cuuid_05)} {
-			    			# MMR read
-			    			msg "MMR recv read: '[convert_string_to_hex $value]'"
-
-			    			parse_binary_mmr_read $value arr
-			    			set mmr_id $arr(Address)
-			    			set mmr_val [ifexists arr(Data0)]
-			    			msg "MMR recv read from $mmr_id ($mmr_val): '[convert_string_to_hex $value]' : [array get arr]"
-			    			if {$mmr_id == "80381C"} {
-			    				msg "Read: GHC is installed: '$mmr_val'"
-			    				set ::settings(ghc_is_installed) $mmr_val
-
-								if {$::settings(ghc_is_installed) == 1 || $::settings(ghc_is_installed) == 2} {
-									# if the GHC is present but not active, check back every 10 minutes to see if its status has changed
-									# this is only relevant if the machine is in a debug GHC mode, where the DE1 acts as if the GHC 
-									# is not there until it is touched. This allows the tablet to start operations.  If (or once) the GHC is 
-									# enabled, only the GHC can start operations.
-									after 600000 get_ghc_is_installed
-								}
-
-			    			} elseif {$mmr_id == "803808"} {
-			    				set ::de1(fan_threshold) $mmr_val
-			    				set ::settings(fan_threshold) $mmr_val
-			    				msg "Read: Fan threshold: '$mmr_val'"
-			    			} elseif {$mmr_id == "80380C"} {
-			    				msg "Read: tank temperature threshold: '$mmr_val'"
-			    				set ::de1(tank_temperature_threshold) $mmr_val
-			    			} elseif {$mmr_id == "803820"} {
-			    				msg "Read: group head control mode: '$mmr_val'"
-			    				set ::settings(ghc_mode) $mmr_val
-			    			} elseif {$mmr_id == "803828"} {
-			    				msg "Read: steam flow: '$mmr_val'"
-			    				set ::settings(steam_flow) $mmr_val
-			    			} elseif {$mmr_id == "80382C"} {
-			    				msg "Read: steam_highflow_start: '$mmr_val'"
-			    				set ::settings(steam_highflow_start) $mmr_val
-			    			} else {
-			    				msg "Uknown type of direct MMR read on '[convert_string_to_hex $mmr_id]': $data"
-			    			}
-
+### Another DE1 characteristic here
+### MOVED TO COMMS (A005 == ReadFromMMR)
+###			    		} elseif {$cuuid == $::de1(cuuid_05)} {
+###			    			# MMR read
+###			    			msg "MMR recv read: '[convert_string_to_hex $value]'"
+###
+###			    			parse_binary_mmr_read $value arr
+###			    			set mmr_id $arr(Address)
+###			    			set mmr_val [ifexists arr(Data0)]
+###			    			msg "MMR recv read from $mmr_id ($mmr_val): '[convert_string_to_hex $value]' : [array get arr]"
+###			    			if {$mmr_id == "80381C"} {
+###			    				msg "Read: GHC is installed: '$mmr_val'"
+###			    				set ::settings(ghc_is_installed) $mmr_val
+###
+###								if {$::settings(ghc_is_installed) == 1 || $::settings(ghc_is_installed) == 2} {
+###									# if the GHC is present but not active, check back every 10 minutes to see if its status has changed
+###									# this is only relevant if the machine is in a debug GHC mode, where the DE1 acts as if the GHC 
+###									# is not there until it is touched. This allows the tablet to start operations.  If (or once) the GHC is 
+###									# enabled, only the GHC can start operations.
+###									after 600000 get_ghc_is_installed
+###								}
+###
+###			    			} elseif {$mmr_id == "803808"} {
+###			    				set ::de1(fan_threshold) $mmr_val
+###			    				set ::settings(fan_threshold) $mmr_val
+###			    				msg "Read: Fan threshold: '$mmr_val'"
+###			    			} elseif {$mmr_id == "80380C"} {
+###			    				msg "Read: tank temperature threshold: '$mmr_val'"
+###			    				set ::de1(tank_temperature_threshold) $mmr_val
+###			    			} elseif {$mmr_id == "803820"} {
+###			    				msg "Read: group head control mode: '$mmr_val'"
+###			    				set ::settings(ghc_mode) $mmr_val
+###			    			} elseif {$mmr_id == "803828"} {
+###			    				msg "Read: steam flow: '$mmr_val'"
+###			    				set ::settings(steam_flow) $mmr_val
+###			    			} elseif {$mmr_id == "80382C"} {
+###			    				msg "Read: steam_highflow_start: '$mmr_val'"
+###			    				set ::settings(steam_highflow_start) $mmr_val
+###			    			} else {
+###			    				msg "Uknown type of direct MMR read on '[convert_string_to_hex $mmr_id]': $data"
+###			    			}
+###
 						} else {
-							msg "Confirmed unknown read from DE1 $cuuid: '$value'"
+							msg "Confirmed unknown read from BLE $cuuid: '$value'"
 						}
 
 						#set ::de1(wrote) 0
 
 				    } elseif {$access eq "w"} {
+# REED to JOHN -- this code seems to be mostly logging various ACK'd writes
+# which -- similar to when $access is 'r' above -- is something BLE provides, that is
+# not automatically provided via the other forms of direct serial comms.  
+# So, I am leaving this code here in the BLE handler and not moving it to de1_comms.tcl 						
 						set ::de1(wrote) 0
 				    	run_next_userdata_cmd
 
@@ -2444,7 +2470,8 @@ proc fast_write_open_DEPRECATED_BY_COMMS {fn parms} {
     return $f
 }
 
-
+# REED to JOHN: This code coule be migrated to de1_comms.tcl so as to repurpose the scanning_state to communicate about
+# e.g. TCP connectivity.  Leaving it for now
 proc scanning_state_text {} {
 	if {$::scanning == 1} {
 		return [translate "Searching"]
