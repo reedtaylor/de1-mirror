@@ -926,10 +926,8 @@ proc close_all_ble_and_exit {} {
 		}
 	}
 	
-# TODO(REED) global replace $::connectivity with $::de1(connectivity) or maybe reference the settings
-# directly, and give the name a "de1_" prefix
 	msg "Closing de1"
-	if {$::connectivity == "BLE" && $::de1(device_handle) != 0} {
+	if {$::de1(connectivity) == "ble" && $::de1(device_handle) != 0} {
 		catch {
 			ble close $::de1(device_handle)
 		}
@@ -1379,7 +1377,7 @@ proc ble_connect_to_de1 {} {
 	msg "ble_connect_to_de1"
 	#return
 
-	if {$::connectivity != "BLE"} {
+	if {$::de1(connectivity) != "ble"} {
 		# do nothing to the exising DE1 connection (or lack thereof), if BLE is not supposed
 		# to be handling the connection
 		return
@@ -1608,41 +1606,7 @@ proc de1_ble_handler { event data } {
 		    connection {
 				if {$state eq "disconnected"} {
 					if {$address == $::settings(bluetooth_address)} {
-					    # fall back to scanning
-					    
-#TODO(REED) call comms disconnect handler for most
-			    		set ::de1(wrote) 0
-			    		set ::de1(cmdstack) {}
-				    	if {$::de1(device_handle) != 0} {
-						    ble close $::de1(device_handle)
-						}
-
-						catch {
-					    	ble close $::currently_connecting_de1_handle
-					    }
-
-					    set ::currently_connecting_de1_handle 0
-
-					    msg "de1 disconnected"
-					    set ::de1(device_handle) 0
-
-					    # temporarily disable this feature as it's not clear that it's needed.
-					    #set ::settings(max_ble_connect_attempts) 99999999
-					    set ::settings(max_ble_connect_attempts) 10
-					    
-					    incr ::failed_attempt_count_connecting_to_de1
-					    if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
-					    	# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
-					    	# and we'll try again to reconnect when the user taps the screen to leave sleep mode
-
-					    	# set this to zero so that when we come back from sleep we try several times to connect
-					    	set ::failed_attempt_count_connecting_to_de1 0
-
-					    	update_de1_state "$::de1_state(Sleep)\x0"
-					    } else {
-						    ble_connect_to_de1
-					    }
-
+					   de1_disconnect_handler $handle
 				    } elseif {$address == $::settings(scale_bluetooth_address)} {
 					
 					#set ::de1(scale_type) ""
@@ -1684,9 +1648,7 @@ proc de1_ble_handler { event data } {
 					if {$::scanning > 0} {
 
 						if {$::de1(device_handle) == 0 && $::currently_connecting_de1_handle == 0} {
-							# TODO(REED) is there an analog to this for non ble?
-							# also check do I need to call ble_ or a non-ble
-							ble_connect_to_de1
+							connect_to_de1
 						}
 
 						#if {$::de1(scale_device_handle) == 0 && $::settings(scale_bluetooth_address) != "" && $::currently_connecting_scale_handle == 0} {
@@ -2470,7 +2432,7 @@ proc scanning_restart {} {
 	if {$::scanning == 1} {
 		return
 	}
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 
 		set ::scale_bluetooth_list [list "12:32:56:78:90" "32:56:78:90:12" "56:78:90:12:32"]
 		set ::de1_bluetooth_list [list "12:32:56:18:90" "32:56:78:90:13" "56:78:90:13:32"]

@@ -16,7 +16,6 @@ proc setup_environment {} {
     global screen_size_height
     global fontm
     global runtime 
-    global connectivity
 
     if {$runtime == "android" || $runtime == undroid} {
         #package require BLT

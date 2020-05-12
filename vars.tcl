@@ -585,7 +585,7 @@ proc waterflow {} {
 		return 0
 	}
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		if {[ifexists ::de1(flow)] == ""} {
 			set ::de1(flow) 3
 		}
@@ -622,7 +622,7 @@ proc watervolume {} {
 	}
 
 
-	if {$::connectivity != "simulated"} {
+	if {$::de1(connectivity) != "simulated"} {
 		return $::de1(volume)
 	}
 	global start_timer
@@ -630,7 +630,7 @@ proc watervolume {} {
 }
 
 proc steamtemp {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 
 		set ::de1(steam_heater_temperature) [expr {(160+(rand() * 5))}]
 	}
@@ -638,7 +638,7 @@ proc steamtemp {} {
 }
 
 proc watertemp {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#set ::de1(head_temperature) [expr {$::settings(espresso_temperature) - 2.0 + (rand() * 4)}]
 		set ::de1(goal_temperature) $::settings(espresso_temperature)
 
@@ -667,7 +667,7 @@ proc pressure {} {
 		return 0
 	}
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		if {$::de1(state) == 4} {
 			#espresso
 			if {[ifexists ::de1(pressure)] == ""} {
@@ -737,7 +737,7 @@ proc accelerometer_angle_text {} {
 proc group_head_heater_temperature {} {
 
 	
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		# slowly have the water level drift
 		set ::de1(water_level) [expr {$::de1(water_level) + (.1*(rand() - 0.5))}]
 		#puts -nonewline .
@@ -749,7 +749,7 @@ proc group_head_heater_temperature {} {
 }
 
 proc steam_heater_temperature {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		set ::de1(mix_temperature) [expr {140 + (rand() * 20.0)}]
 	}
 
@@ -757,7 +757,7 @@ proc steam_heater_temperature {} {
 
 }
 proc water_mix_temperature {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		if {$::de1(substate) == $::de1_substate_types_reversed(pouring) || $::de1(substate) == $::de1_substate_types_reversed(preinfusion)} {	
 			if {$::de1(mix_temperature) == "" || $::de1(mix_temperature) < 85 || $::de1(mix_temperature) > 99} {
 				set ::de1(mix_temperature) 94
@@ -940,7 +940,7 @@ proc waterflow_text {} {
 }
 
 proc watervolume_text {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		if {$::de1(substate) == $::de1_substate_types_reversed(pouring) || $::de1(substate) == $::de1_substate_types_reversed(preinfusion)} {	
 			if {$::de1(volume) == ""} {
 				set ::de1(volume) 0
@@ -954,7 +954,7 @@ proc watervolume_text {} {
 }
 
 proc waterweightflow_text {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		if {$::de1(substate) == $::de1_substate_types_reversed(pouring) || $::de1(substate) == $::de1_substate_types_reversed(preinfusion)} {	
 			if {[espresso_millitimer] > 5000} {	
 				# no weight increase for 5s due to preinfusion
@@ -1003,7 +1003,7 @@ proc waterweight_text {} {
 		return ""
 	}
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		if {[espresso_millitimer] < 5000} {	
 			# no weight increase for 5s due to preinfusion
 			set ::de1(scale_weight) 0
@@ -1095,7 +1095,7 @@ proc diff_group_temp_from_goal_text {} {
 }
 
 proc diff_pressure {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		return [expr {3 - (rand() * 6)}]
 	}
 
@@ -1103,7 +1103,7 @@ proc diff_pressure {} {
 }
 
 proc diff_flow_rate {} {
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		return [expr {3 - (rand() * 6)}]
 	}
 
@@ -1653,7 +1653,7 @@ proc fill_ble_listbox {} {
 # (a) I'm not confident that's exactly right, and (b) this doesn't do anything anyway (all
 # lines commented out)... I think this dummy data now comes from proc scanning_restart in bluetooth.tcl.
 # So - whatever, I guess?
-	if {$::connectivity == "simulated"} {	
+	if {$::de1(connectivity) == "simulated"} {	
 		#set ::scale_bluetooth_list [list "C1:80:A7:32:CD:A3" "C5:80:EC:A5:F9:72" "F2:C3:43:60:AB:F5"]
 		#set ::de1_bluetooth_list ""
 	}

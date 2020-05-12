@@ -5,13 +5,13 @@ set ::failed_attempt_count_connecting_to_de1 0
 set ::successful_de1_connection_count 0
 
 proc de1_real_machine {} {
-	if {$::connectivity == "BLE"} {
+	if {$::de1(connectivity) == "ble"} {
 		return true
 	} 
-	if {$::connectivity == "TCP"} {
+	if {$::de1(connectivity) == "TCP"} {
 		return true
 	} 
-	if {$::connectivity == "USB"} {
+	if {$::de1(connectivity) == "USB"} {
 		return true
 	} 
 
@@ -26,7 +26,7 @@ proc de1_real_machine_connected {} {
 
 	# for each form of connectivity, determine whether the machine is 
 	# currently connected
-	if {$::connectivity == "BLE"} {
+	if {$::de1(connectivity) == "ble"} {
 		if {[ifexists ::sinstance($::de1(suuid))] != ""} {
 			return true
 		}
@@ -307,7 +307,7 @@ proc write_firmware_now {} {
 
 proc firmware_upload_next {} {
 	
-	if {$::connectivity=="simulated"} {
+	if {$::de1(connectivity)=="simulated"} {
 		msg "firmware_upload_next connected to 'simulated' machine; updating button text (only)"
 	} elseif {[de1_real_machine_connected] && [de1_safe_for_firmware]} {
 		msg "firmware_upload_next $::de1(firmware_bytes_uploaded)"
@@ -322,7 +322,7 @@ proc firmware_upload_next {} {
 		set ::settings(firmware_crc) [crc::crc32 -filename [fwfile]]
 		save_settings
 
-		if {$::connectivity == "simulated"} {
+		if {$::de1(connectivity) == "simulated"} {
 			set ::de1(firmware_update_button_label) "Updated"
 			
 		} else {
@@ -350,7 +350,7 @@ proc firmware_upload_next {} {
 		set data "\x10[make_U24P0 $::de1(firmware_bytes_uploaded)][string range $::de1(firmware_update_binary) $::de1(firmware_bytes_uploaded) [expr {15 + $::de1(firmware_bytes_uploaded)}]]"
 		userdata_append "Write [string length $data] bytes of firmware data ([convert_string_to_hex $data])" [list de1_comm write WriteToMMR $data]
 		set ::de1(firmware_bytes_uploaded) [expr {$::de1(firmware_bytes_uploaded) + 16}]
-		if {$::connectivity != "simulated"} {
+		if {$::de1(connectivity) != "simulated"} {
 			after 1 firmware_upload_next
 		}
 	}
@@ -368,7 +368,7 @@ proc mmr_read {address length} {
 	set mmrloc [binary decode hex $address]
 	set data "$mmrlen${mmrloc}[binary decode hex 00000000000000000000000000000000]"
 	
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		msg "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc]: with comment [convert_string_to_hex $data]"
 		return
 	}
@@ -392,7 +392,7 @@ proc mmr_write { address length value} {
  	set mmrval [binary decode hex $value]	
 	set data "$mmrlen${mmrloc}${mmrval}[binary decode hex 000000000000000000000000000000]"
 	
-	if {$::connectivity ==  "simulated"} {
+	if {$::de1(connectivity) ==  "simulated"} {
 		msg "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]"
 		return
 	}
@@ -523,7 +523,7 @@ proc de1_send_waterlevel_settings {} {
 ### may not be of benefit to non the-BLE cases.  Even though this may come at some cost in terms
 ### of throughput, it seemed the safer thing to do.  It would be pretty easy to defeat the protection 
 ### by making this one check (here at the top of proc run_next_userdata_command) conditional on
-### {$::connectivity == "BLE"}, while still preserving the logic of setting and unsetting
+### {$::de1(connectivity) == "ble"}, while still preserving the logic of setting and unsetting
 ### de1(wrote) ... which would make the "one command at a time" ve "not" an easy choice to revert.
 proc run_next_userdata_cmd {} {
 	# only write one command at a time.  this protection was implemented for BLE
@@ -593,7 +593,7 @@ proc close_all_comms_and_exit {} {
 proc app_exit {} {
 	close_log_file
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		close_all_comms_and_exit
 	}
 
@@ -735,7 +735,7 @@ proc de1_send_calibration {calib_target reported measured {calibcmd 1} } {
 	userdata_append "Set calibration: [array get arr2] : [string length $data] bytes: ([convert_string_to_hex $data])" [list de1_comm write Calibration $data]
 }
 
-proc de1_read_calibration_DEPRECATED_BY_COMMS {calib_target {factory 0} } {
+proc de1_read_calibration {calib_target {factory 0} } {
 	if {![de1_real_machine_connected]} {
 		msg "DE1 not connected, cannot send command 18"
 		return
@@ -851,7 +851,7 @@ proc connect_to_devices {} {
 	#@return
 	msg "connect_to_devices"
 
-	if {$::connectivity != "BLE"} {
+	if {$::de1(connectivity) != "ble"} {
 		connect_to_de1
 	}
 	# we unconditionally call bluetooth_connect_to_devices because:
@@ -872,9 +872,12 @@ proc connect_to_de1 {} {
 	msg "connect_to_de1"
 	#return
 
-	if {$::connectivity == "BLE"} {
+	if {$::de1(connectivity) == "ble"} {
+		# because a bunch of things get initialized during BLE enumeration, we do not need to call the initialization code
+		# below; this just returns immediately
 		return [ble_connect_to_de1]
-	} elseif {$::connectivity == "simulated"} {
+	} elseif {$::de1(connectivity) == "simulated"} {
+		# a simulated machine does not need as much initialization, so we do not call the initialization code below
 		msg "simulated DE1 connection"
 	    set ::de1(connect_time) [clock seconds]
 	    set ::de1(last_ping) [clock seconds]
@@ -890,20 +893,23 @@ proc connect_to_de1 {} {
 		set ::de1(version) [array get arr2]
 
 		return
-	} else {
-		# TODO(REED) Actually connect here -- see this routine in ble for the catch / error code handling
+	} elseif {$::de1(connectivity)} == "tcp"} {
+		# connect to DE1 via TCP
+		tcp_connect_to_de1
+	} elseif {$::de1(connectivity)} == "usb"} {
+		# TODO(REED) usb connect
+	}
 
-		# subscribe and initialize outside
-		# what happens during BLE enumeration using the recommendations from here: 
-		# https://3.basecamp.com/3671212/buckets/7351439/messages/1976315941#__recording_2008131794
-		de1_enable_temp_notifications
-		de1_enable_water_level_notifications
-		de1_send_steam_hotwater_settings
-		de1_send_shot_frames
-		read_de1_version
-		de1_enable_state_notifications
-		read_de1_state
-	} 
+	# subscribe and initialize outside
+	# what happens during BLE enumeration using the recommendations from here: 
+	# https://3.basecamp.com/3671212/buckets/7351439/messages/1976315941#__recording_2008131794
+	de1_enable_temp_notifications
+	de1_enable_water_level_notifications
+	de1_send_steam_hotwater_settings
+	de1_send_shot_frames
+	read_de1_version
+	de1_enable_state_notifications
+	read_de1_state
 
     set ::de1(connect_time) 0
     
@@ -956,19 +962,24 @@ proc de1_disconnect_handler {} {
 
 	# interesting idea - use these device_handle variables to hold the filehandle etc?
 	if {$::de1(device_handle) != 0} {
+		if {$::de1(connectivity) == "ble"} {
+			ble close $::de1(device_handle)
+		}
 		# TODO(REED) need this to be not just ble
-		ble close $::de1(device_handle)
 	}
 
 	catch {
+		if {$::de1(connectivity) == "ble"} {
+			ble close $::currently_connecting_de1_handle
+		}
 		# TODO(REED) need this to be not just ble
-		ble close $::currently_connecting_de1_handle
 	}
 	set ::de1(device_handle) 0
 
 	set ::settings(max_ble_connect_attempts) 10
 
-		# TODO(REED) need this to be not just ble (possibly cosmetic)
+		# TODO(REED) ::settings(max_ble_connect_attempts) should probably be renamed, but renaming the setting sounds annoying
+		# so leaving it for now
 	incr ::failed_attempt_count_connecting_to_de1
 	if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
 		# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
@@ -979,13 +990,11 @@ proc de1_disconnect_handler {} {
 
 		update_de1_state "$::de1_state(Sleep)\x0"
 	} else {
-		ble_connect_to_de1
+		connect_to_de1
 	}
-
 }
 
-de1_connnect_handler {} {
-	#TODO(REED) handle comes from somewhere
+de1_connnect_handler {handle} {
 	incr ::successful_de1_connection_count
 	set ::failed_attempt_count_connecting_to_de1 0
 
@@ -999,7 +1008,10 @@ de1_connnect_handler {} {
 
 	#msg "Connected to DE1"
 	set ::de1(device_handle) $handle
-	append_to_de1_bluetooth_list $address
+	if ($::de1(connectivity) == "ble") {
+		append_to_de1_bluetooth_list $address
+	}
+	# TODO(REED) use bluetooth list to also display other connections?  later
 	#return
 
 
@@ -1352,7 +1364,7 @@ proc data_to_hex_string {data} {
     # Do the actual send operation on the configured connection.
     # These should all be wrapped in catch statements etc. for proper
     # error handling & recovery
-    if {$::connectivity == "TCP"} {
+    if {$::de1(connectivity) == "TCP"} {
         if {[info exists ::TCPSocket]} {
             # Presumably this should be wrapped in a catch statement
             # for cases of lost connection, full buffers, etc.
@@ -1360,7 +1372,7 @@ proc data_to_hex_string {data} {
             flush $::de1(desireSock)
             return 1
         }
-    } elseif {$::connectivity == "USB"} {
+    } elseif {$::de1(connectivity) == "USB"} {
         if {$::runtime == "android"} {
             ## OTG code goes here
         } else {

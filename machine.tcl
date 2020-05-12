@@ -121,6 +121,7 @@ array set ::de1 {
 	steam_time_max 250
 	last_ping 0
 	steam_heater_temperature 150
+	connectivity "unknown"
 }
 
 set ::de1(last_ping) [clock seconds]
@@ -405,15 +406,16 @@ array set ::settings {
 	preheat_temperature 95
 	water_volume 50
     ghc_is_installed 0
-
+	de1_preferred_connectivity "ble"
 }
+# TODO(REED) downcase BLE everywhere it's used as this enum
 
 if {[de1plus]} {
 	# default de1plus skin
 	set ::settings(skin) "Insight"
 }
 
-if {$::connectivity == "simulated"} {
+if {$::de1(connectivity) == "simulated"} {
 	set ::settings(ghc_is_installed) 0
 }
 
@@ -519,7 +521,7 @@ proc start_refill_kit {} {
 	set ::de1(timer) 0
 	set ::de1(volume) 0
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(Refill)\x5"]
@@ -541,7 +543,7 @@ proc start_decaling {} {
 	set ::de1(volume) 0
 	de1_send_state "descale" $::de1_state(Descale)
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(Descale)\x5"]
@@ -556,7 +558,7 @@ proc start_air_purge {} {
 	set ::de1(volume) 0
 	de1_send_state "air purge" $::de1_state(AirPurge)
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(AirPurge)\x5"]
@@ -572,7 +574,7 @@ proc start_cleaning {} {
 	set ::de1(volume) 0
 	de1_send_state "descale" $::de1_state(Clean)
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		#after 200 "update_de1_state $::de1_state(Descale)"
 		after 200 [list update_de1_state "$::de1_state(Clean)\x5"]
@@ -597,7 +599,7 @@ proc start_hot_water_rinse {} {
 	}
 
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		after 200 [list update_de1_state "$::de1_state(HotWaterRinse)\x5"]
 		after 10000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -610,7 +612,7 @@ proc start_steam_rinse {} {
 	set ::de1(volume) 0
 	de1_send_state "steam rinse" $::de1_state(SteamRinse)
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		after 200 [list update_de1_state "$::de1_state(SteamRinse)\x5"]
 	}
@@ -646,7 +648,7 @@ proc start_steam {} {
 		set ::idle_next_step start_steam
 	}
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(steam_max_time)}] {page_display_change "steam" "off"}
 		after 200 [list update_de1_state "$::de1_state(Steam)\x5"]
 		after 10000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -734,7 +736,7 @@ proc start_espresso {} {
 		return
 	}
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(espresso_max_time)}] {page_display_change "espresso" "off"}
 		after 200 [list update_de1_state "$::de1_state(Espresso)\x1"]
 		after 30000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -762,7 +764,7 @@ proc start_water {} {
 	}
 
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(water_max_time)}] {page_display_change "water" "off"}
 		after 200 [list update_de1_state "$::de1_state(HotWater)\x5"]
 		after 10000 [list update_de1_state "$::de1_state(Idle)\x5"]
@@ -806,7 +808,7 @@ proc start_idle {} {
 		#scale_enable_lcd
 	}
 
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(water_max_time)}] {page_display_change "water" "off"}
 		after 200 [list update_de1_state "$::de1_state(Idle)\x0"]
 	}
@@ -859,7 +861,7 @@ proc start_sleep {} {
 	}
 
 	
-	if {$::connectivity == "simulated"} {
+	if {$::de1(connectivity) == "simulated"} {
 		#after [expr {1000 * $::settings(water_max_time)}] {page_display_change "water" "off"}
 		after 200 [list update_de1_state "$::de1_state(GoingToSleep)\x0"]
 		after 800 [list update_de1_state "$::de1_state(Sleep)\x0"]

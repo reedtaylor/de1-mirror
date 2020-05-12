@@ -8,9 +8,17 @@ package provide de1_updater 1.0
 proc determine_if_android {} {
 
     set ::runtime "default"
-    set ::connectivity "simulated"
     set ::some_droid 0
 
+    if {[ifexists $::settings(de1_desired_connectivity)] == "tcp"} {
+        set $::de1(connectivity) "tcp"
+    } elseif {[ifexists $::settings(de1_desired_connectivity)] == "usb"} {
+        set $::de1(connectivity) "usb"
+    } else {
+        set $::de1(connectivity) "simulated"
+    }
+
+ife
 
     catch {
         package require BLT
@@ -22,6 +30,9 @@ proc determine_if_android {} {
 
         package require ble
         set ::runtime "android"
+        if {[ifexists $::settings(de1_desired_connectivity)] == "ble"} {
+            set $::de1(connectivity) "ble"
+        }
     }
 
     if {$::runtime == "android" || $::runtime == "undroid"} {
@@ -121,39 +132,6 @@ proc write_file {filename data} {
     }
 
     return $success
-}
-
-proc percent20encode {in} {
-    set out $in
-    regsub -all " " $out "%20" out
-    #regsub -all "&" $out "%26" out
-    regsub -all {"} $out "%22" out
-    regsub -all {#} $out "%23" out
-    regsub -all {'} $out "%27" out
-    regsub -all {!} $out "%21" out
-    regsub -all {:} $out "%3A" out
-    regsub -all {;} $out "%3B" out
-    regsub -all {#} $out "%23" out
-    #regsub -all {=} $out "%3D" out
-    regsub -all {:} $out "%3A" out
-    regsub -all "\\?" $out "%3F" out
-    regsub -all {@} $out "%40" out
-    regsub -all {>} $out "%3E" out
-    regsub -all {/} $out "%2F" out
-    regsub -all {<} $out "%3C" out
-    regsub -all {\$} $out "%24" out
-    regsub -all {`} $out "%60" out
-    regsub -all {\[} $out "%5B" out
-    regsub -all {\]} $out "%5D" out
-    regsub -all {~} $out "%7E" out
-    regsub -all {\^} $out "%5E" out
-    regsub -all {\|} $out "%7C" out
-    regsub -all "," $out "%2C" out
-    regsub -all "\\)" $out "%29" out
-    regsub -all "\\(" $out "%28" out
-    
-    #puts "urlenc: '$in' / '$out'"
-    return $out
 }
 
 
@@ -801,4 +779,38 @@ proc reset_skin {} {
     array set ::settings [encoding convertfrom utf-8 [read_binary_file $s]]
     set ::settings(skin) "Insight"
     save_array_to_file ::settings $s
+}
+
+
+proc percent20encode {in} {
+    set out $in
+    regsub -all " " $out "%20" out
+    #regsub -all "&" $out "%26" out
+    regsub -all {"} $out "%22" out
+    regsub -all {#} $out "%23" out
+    regsub -all {'} $out "%27" out
+    regsub -all {!} $out "%21" out
+    regsub -all {:} $out "%3A" out
+    regsub -all {;} $out "%3B" out
+    regsub -all {#} $out "%23" out
+    #regsub -all {=} $out "%3D" out
+    regsub -all {:} $out "%3A" out
+    regsub -all "\\?" $out "%3F" out
+    regsub -all {@} $out "%40" out
+    regsub -all {>} $out "%3E" out
+    regsub -all {/} $out "%2F" out
+    regsub -all {<} $out "%3C" out
+    regsub -all {\$} $out "%24" out
+    regsub -all {`} $out "%60" out
+    regsub -all {\[} $out "%5B" out
+    regsub -all {\]} $out "%5D" out
+    regsub -all {~} $out "%7E" out
+    regsub -all {\^} $out "%5E" out
+    regsub -all {\|} $out "%7C" out
+    regsub -all "," $out "%2C" out
+    regsub -all "\\)" $out "%29" out
+    regsub -all "\\(" $out "%28" out
+    
+    #puts "urlenc: '$in' / '$out'"
+    return $out
 }
