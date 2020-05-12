@@ -24,16 +24,13 @@ proc de1_real_machine_connected {} {
 		return false
 	}
 
-	# for each form of connectivity, determine whether the machine is 
-	# currently connected
 	if {$::de1(connectivity) == "ble"} {
-		if {[ifexists ::sinstance($::de1(suuid))] != ""} {
-			return true
-		}
+		return [ble_de1_connected]
+	} elseif {$::de1(connectivity) == "tcp"} {
+		return [tcp_de1_connected]
+	} elseif {$::de1(connectivity) == "usb"} {
+		# USB TODO(REED) - usb connectivity check
 	}
-
-# TODO(REED) - implement connected checks for the other forms of connectivity
-# note these should probably move into e.g. bluetooth.tcl for organizational reasons
 
 	return false
 }
@@ -151,7 +148,6 @@ proc de1_disable_state_notifications {} {
 	userdata_append "disable state notifications" [list de1_comm disable StateInfo]
 }
 
-# TODO(REED) - check on de1_version_bleapi (vars.tcl) which needs to be correct even for general case
 proc mmr_available {} {
 
 	if {$::de1(mmr_enabled) == 0} {
@@ -534,9 +530,6 @@ proc run_next_userdata_cmd {} {
 	}
 
 	if {![de1_real_machine_connected]} {
-# TODO(REED) note this useful-looking definition for what "not connected via BLE looks like
-#	if {($::de1(device_handle) == "0" || $::de1(device_handle) == "1") && $::de1(scale_device_handle) == "0"} {
-		#msg "error: de1 not connected"
 		return
 	}
 
@@ -583,10 +576,15 @@ proc run_next_userdata_cmd {} {
 
 proc close_all_comms_and_exit {} {
 
-# TODO(REED) Write code to close non-BLE comms here
+	if ($::de1(connectivity == "tcp") {
+		tcp_close_de1
+	} elseif {$::de1(connectivity == "usb") {
+		# USB TODO(REED) usb close
+	}
 
-# call the ble-specific routine to finish exiting (unconditionally,regardless of $::connectvity)
-# because we might be connected to scales and whatnot
+	# unconditionallly call the ble-specific routine close connections.
+	# this will disconnect the de1 if connectivity is BLE, but also handles cleanly disconnecting from other
+	# potential BLE devices (scales and whatnot)
 	close_all_ble_and_exit
 }	
 
@@ -870,14 +868,25 @@ proc connect_to_devices {} {
 
 proc connect_to_de1 {} {
 	msg "connect_to_de1"
-	#return
+
+	set ::de1(connect_time) 0
+
+	if {$::de1(device_handle) != "0"} {
+		msg "disconnecting from DE1"
+		catch {
+			close_de1
+			set ::de1(device_handle) "0"
+			after 1000 connect_to_de1
+			return
+		}
+	}
+    set ::de1_name "DE1"
 
 	if {$::de1(connectivity) == "ble"} {
 		# because a bunch of things get initialized during BLE enumeration, we do not need to call the initialization code
 		# below; this just returns immediately
 		return [ble_connect_to_de1]
 	} elseif {$::de1(connectivity) == "simulated"} {
-		# a simulated machine does not need as much initialization, so we do not call the initialization code below
 		msg "simulated DE1 connection"
 	    set ::de1(connect_time) [clock seconds]
 	    set ::de1(last_ping) [clock seconds]
@@ -892,12 +901,13 @@ proc connect_to_de1 {} {
 		parse_binary_version_desc $version_value arr2
 		set ::de1(version) [array get arr2]
 
+		# a simulated machine does not need as much initialization, so we do not call the initialization code below
 		return
 	} elseif {$::de1(connectivity)} == "tcp"} {
 		# connect to DE1 via TCP
 		tcp_connect_to_de1
 	} elseif {$::de1(connectivity)} == "usb"} {
-		# TODO(REED) usb connect
+		# USB TODO(REED) usb connect
 	}
 
 	# subscribe and initialize outside
@@ -910,14 +920,10 @@ proc connect_to_de1 {} {
 	read_de1_version
 	de1_enable_state_notifications
 	read_de1_state
-
-    set ::de1(connect_time) 0
-    
-    set ::de1_name "DE1"
 }
 
 
-# TODO(REED) consider resurrecting this to shim a "connect via tcp" fake machine entry
+# USABILITY TCP USB TODO(REED) consider resurrecting this to shim a "connect via tcp" fake machine entry
 # into the BT connection UI?
 #proc append_to_de1_bluetooth_list {address} {
 #	set newlist $::de1_bluetooth_list
@@ -935,6 +941,19 @@ proc connect_to_de1 {} {
 #	}
 #}
 
+
+proc close_de1 {} {
+	if {$::de1(device_handle) != 0} {
+		if {$::de1(connectivity) == "ble"} {
+			ble_close_de1
+		} elseif ($::de1(connectivity) == "tcp") {
+			tcp_close_de1
+		} elseif ($::de1(connectivity) == "usb") {
+			# USB TODO(REED) usb_close_de1
+		}
+	}
+	set ::de1(device_handle) 0
+}
 
 proc later_new_de1_connection_setup {} {
 	# less important stuff, also some of it is dependent on BLE version
@@ -959,27 +978,11 @@ proc de1_disconnect_handler {} {
 	set ::currently_connecting_de1_handle 0
 	msg "de1 disconnected"
 
-# TODO(REED)  use these device_handle variables to hold the filehandle etc?
-	if {$::de1(device_handle) != 0} {
-		if {$::de1(connectivity) == "ble"} {
-			ble close $::de1(device_handle)
-		}
-		# TODO(REED) need this to be not just ble
-	}
+	close_de1
 
-	catch {
-		if {$::de1(connectivity) == "ble"} {
-			ble close $::currently_connecting_de1_handle
-		}
-		# TODO(REED) need this to be not just ble
-	}
-	set ::de1(device_handle) 0
-
-# TODO(REED) more "get rid of ble" edits
+	# NAMING TODO(REED) "ble" in settings name to be cleaned up
 	set ::settings(max_ble_connect_attempts) 10
 
-		# TODO(REED) ::settings(max_ble_connect_attempts) should probably be renamed, but renaming the setting sounds annoying
-		# so leaving it for now
 	incr ::failed_attempt_count_connecting_to_de1
 	if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
 		# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
@@ -995,7 +998,6 @@ proc de1_disconnect_handler {} {
 }
 
 de1_connnect_handler { handle address } {
-#TODO(REED) make sure $handle and $address come from somewhere in non-BLE cases
 	incr ::successful_de1_connection_count
 	set ::failed_attempt_count_connecting_to_de1 0
 
@@ -1012,9 +1014,7 @@ de1_connnect_handler { handle address } {
 	if ($::de1(connectivity) == "ble") {
 		append_to_de1_bluetooth_list $address
 	}
-	# TODO(REED) use bluetooth list to also display other connections?  later
-	#return
-
+	# USABILITY TODO(REED) use bluetooth list to also display other connections
 
 	#msg "connected to de1 with handle $handle"
 	set testing 0
@@ -1249,7 +1249,7 @@ proc after_shot_weight_hit_update_final_weight {} {
 
 }
 
-# TODO(REED) - use this?
+# USB TODO(REED) - use this?
 proc fast_write_open {fn parms} {
     set f [open $fn $parms]
     fconfigure $f -blocking 0
@@ -1258,7 +1258,7 @@ proc fast_write_open {fn parms} {
 }
 
 
-# TODO(REED) Consider resurrecting this for status on the settings page
+# USABILITY TODO(REED) Consider resurrecting this for status on the settings page
 #proc scanning_state_text {} {
 #	if {$::scanning == 1} {
 #		return [translate "Searching"]
@@ -1284,9 +1284,16 @@ proc data_to_hex_string {data} {
     return [binary encode hex $data]
 }
 
+proc de1_comm {action data} {
+	if {$::de1(connectivity) == "ble"} {
+		return [ble $action $data]
+	} else {
+		# TODO(REED) finish this -- basically need to turn the read / enable / etc stuff into the <+X> strings
+		# then write them out.  And also do the write which is somewhat more of a passthrough.
+	}
+}
 
-
-# /**** TODO(REED) ****/
+# /**** TCP TODO(REED) ****/
     # Do the actual send operation on the configured connection.
     # These should all be wrapped in catch statements etc. for proper
     # error handling & recovery

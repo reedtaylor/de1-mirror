@@ -1,7 +1,6 @@
+# TCP TODO(REED): actually implement all this
 
-TODO(REED): actually implement
-
-proc tcp_read {sock} {
+proc tcp_read_handler {sock} {
     set inString [gets $sock]
     set command [string index $inString 1]
     set inHexStr [string range $inString 3 end]
@@ -11,19 +10,48 @@ proc tcp_read {sock} {
     de1_ble_handler_wrapper $command $inHex
 }
 
+# TCP TODO(REED) make this real and also pull the values from settings
+# use  $::de1(device_handle) variables to hold the filehandle
 
 proc tcp_connect_to_de1 {} {
-    set desireHost "desire.durf.local"
-    set desirePort 9090
+	msg "tcp_connect_to_de1"
 
-    set ::de1(desireSock) [socket $desireHost $desirePort]
-    fileevent $::de1(desireSock) readable [list read_sock $::de1(desireSock)]
-    fconfigure $::de1(desireSock) -buffering line
+    set tcp_host [ifexists $::settings(de1_tcp_host)]
+    set tcp_port [ifexists $::settings(de1_tcp_port)]
+
+	if ($tcp_host == "") {
+		msg "Missing TCP hostname, using 'de1' as a fallback"
+		set tcp_host "de1"
+	}
+
+	if ($tcp_port == "") {
+		msg "Missing TCP port, using 9090 as a fallback"
+		set tcp_port "9090"
+	}
+
+    set ::de1(device_handle) [socket $tcp_host $tcp_port]
+    fileevent $::de1(device_handle) readable [list tcp_read_handler $::de1(device_handle)]
+    fconfigure $::de1(device_handle) -buffering line
+
+	# borrowed from fast_write_open -- need to make sure this plays nicely with flush()
+	fconfigure $f -blocking 0
+
+	# TCP TODO(REED) check if connection was successful and then call this
+	# (also need to fix this up, e.g. figure what "address" should be)
+	de1_connnect_handler { handle address }
 }
 
+proc tcp_de1_connected {} {
+	# TCP TODO(REED) TCP is_connected check should really check if the socket is still open
+	if {[$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
+		return true
+	} 
+	return false
+}
 
-
-
+proc tcp_close_de1 {} {
+	# TCP TODO(REED) close
+}
 
 
 

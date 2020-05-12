@@ -928,9 +928,7 @@ proc close_all_ble_and_exit {} {
 	
 	msg "Closing de1"
 	if {$::de1(connectivity) == "ble" && $::de1(device_handle) != 0} {
-		catch {
-			ble close $::de1(device_handle)
-		}
+		ble_close_de1
 	}
 
 	msg "Closing scale"
@@ -1372,42 +1370,40 @@ proc bluetooth_connect_to_devices {} {
 }
 
 
-set ::currently_connecting_de1_handle 0
+### MOVED TO COMMS
+### set ::currently_connecting_de1_handle 0
+
 proc ble_connect_to_de1 {} {
 	msg "ble_connect_to_de1"
-	#return
-
-	if {$::de1(connectivity) != "ble"} {
-		# do nothing to the exising DE1 connection (or lack thereof), if BLE is not supposed
-		# to be handling the connection
-		return
-	}
 
 	if {$::settings(bluetooth_address) == ""} {
 		# if no bluetooth address set, then don't try to connect
 		return ""
 	}
 
-# REED to JOHN: I don't see ::de1(scanning) referenced anywhere else in the code, this line
-# maybe should be setting ::scanning instead? (I do see that referenced in a lot of places.)
-    set ::de1(connect_time) 0
+	### MOVED TO COMMS
+    ### set ::de1(connect_time) 0
+
+	# REED to JOHN: I don't see ::de1(scanning) referenced anywhere else in the code, this line
+	# maybe should be setting ::scanning instead? (I do see that referenced in a lot of places.)
     set ::de1(scanning) 0
 
-	if {$::de1(device_handle) != "0"} {
-		catch {
-			msg "disconnecting from DE1"
-			ble close $::de1(device_handle)
-			set ::de1(device_handle) "0"
-			after 1000 ble_connect_to_de1
-		}
-		catch {
-			#ble unpair $::settings(bluetooth_address)
-		}
-
-	}
-    set ::de1(device_handle) 0
-
-    set ::de1_name "DE1"
+### MOVED TO COMMS
+###	if {$::de1(device_handle) != "0"} {
+###		catch {
+###			msg "disconnecting from DE1"
+###			ble close $::de1(device_handle)
+###			set ::de1(device_handle) "0"
+###			after 1000 connect_to_de1
+###		}
+###		catch {
+###			#ble unpair $::settings(bluetooth_address)
+###		}
+###
+###	}
+###   set ::de1(device_handle) 0
+###
+###    set ::de1_name "DE1"
 	if {[catch {
 		set ::currently_connecting_de1_handle [ble connect $::settings(bluetooth_address) de1_ble_handler false]
     	msg "Connecting to DE1 on $::settings(bluetooth_address)"
@@ -1425,6 +1421,30 @@ proc ble_connect_to_de1 {} {
 	#msg "Failed to start to BLE connect to DE1 for some reason"
 	#return 0    
     
+}
+
+proc ble_de1_connected {} {
+	if {[ifexists ::sinstance($::de1(suuid))] != "" && $::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
+		return true
+	}
+	return false
+}
+
+
+proc ble_close_de1 {} {
+	if ($::de1(device_handle) == 0) {
+		msg "Tried to close a non-open device handle"
+		return
+	}
+
+	ble close $::de1(device_handle)
+
+	catch {
+		ble close $::currently_connecting_de1_handle
+	}
+
+	set ::currently_connecting_de1_handle 0
+	set ::de1(device_handle) 0
 }
 
 set ::currently_connecting_scale_handle 0
@@ -1608,7 +1628,7 @@ proc de1_ble_handler { event data } {
 				if {$state eq "disconnected"} {
 					if {$address == $::settings(bluetooth_address)} {
 					   de1_disconnect_handler $handle
-### MOVED TO COMMS
+### MOVED TO COMMS and also to proc ble_close_de1 below
 ###			    		set ::de1(wrote) 0
 ###			    		set ::de1(cmdstack) {}
 ###				    	if {$::de1(device_handle) != 0} {

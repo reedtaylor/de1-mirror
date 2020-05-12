@@ -1133,16 +1133,6 @@ proc pressure_text {} {
 }
 
 
-proc commify {number}  {
-	set sep ,
-	 while {[regsub {^([-+]?\d+)(\d\d\d)} $number "\\1$sep\\2" number]} {}
-	if {[ifexists ::settings(enable_commanumbers)] == 1} {
-		set number [string map {. , , .} $number]
-	}
-	return $number
-}
-
-
 #######################
 # settings
 proc setting_steam_max_time {} {
@@ -3255,3 +3245,14 @@ foreach p [info procs] { set kpv(p,$p) 1 }
 
     source "de1plus.tcl"
  }
+
+
+# reed moved this here because it was confusing my pretty-printer
+ proc commify {number}  {
+	set sep ,
+	 while {[regsub {^([-+]?\d+)(\d\d\d)} $number "\\1$sep\\2" number]} {}
+	if {[ifexists ::settings(enable_commanumbers)] == 1} {
+		set number [string map {. , , .} $number]
+	}
+	return $number
+}
