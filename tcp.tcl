@@ -10,9 +10,6 @@ proc tcp_read_handler {sock} {
     de1_ble_handler_wrapper $command $inHex
 }
 
-# TCP TODO(REED) make this real and also pull the values from settings
-# use  $::de1(device_handle) variables to hold the filehandle
-
 proc tcp_connect_to_de1 {} {
 	msg "tcp_connect_to_de1"
 

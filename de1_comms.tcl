@@ -1284,33 +1284,38 @@ proc data_to_hex_string {data} {
     return [binary encode hex $data]
 }
 
-proc de1_comm {action data} {
+proc de1_comm {action command_name data} {
 	if {$::de1(connectivity) == "ble"} {
-		return [ble $action $data]
-	} else {
-		# TODO(REED) finish this -- basically need to turn the read / enable / etc stuff into the <+X> strings
-		# then write them out.  And also do the write which is somewhat more of a passthrough.
+		# TODO(REED) move this into a single proc in BLE land
+		set current_cuuid $::de1_command_names_to_cuuids($command_name)
+		if {$action == "read" || $action == "enable" || $action == "disable"} {
+			return [ble $action $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $current_cuuid   $::cinstance($current_cuuid)]
+		} elseif {$action == "write"} {
+			return [ble $action $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $current_cuuid   $::cinstance($current_cuuid)   $data]
+		} else {
+			msg "Unknown communication action: $action $command_name"
+		}
+	} elseif ($::de1(connectivity) == "tcp" || $::de1(connectivity) == "usb") {
+		# TODO(REED) decide whether to move this into a TCP specific proc .. might actually not want to do this
+		# since fileio is I think the same... to wit
+		# USB TODO(REED) make sure usb works properly i.e. uses a fielhandle and not some weird serial comms at this stage
+		# TCP USB TODO(REED) check for writeability and/or catch errors
+		set current_handle $::de1_command_names_to_serial_handles($command_name)
+		if {$action == "read" || $action == "enable"} {
+			set serial_str "<+$current_handle>\n"
+			puts -nonewline $::de1(device_handle) $serial_str
+		} elseif {$action == "disable"} {
+			set serial_str "<-$current_handle>\n"
+			puts -nonewline $::de1(device_handle) $serial_str
+		} elseif {$action == "write"} {
+			set data_str [data_to_hex_string $data]
+			set serial_str "<$current_handle>$data_str\n"
+			puts -nonewline $::de1(device_handle) $serial_str
+		} else {
+			msg "Unknown communication action: $action $command_name"
+		}
+		# we don't want buffering to delay sending our messages, so force flush 
+		flush $::de1(device_handle)
 	}
 }
 
-# /**** TCP TODO(REED) ****/
-    # Do the actual send operation on the configured connection.
-    # These should all be wrapped in catch statements etc. for proper
-    # error handling & recovery
-    if {$::de1(connectivity) == "TCP"} {
-        if {[info exists ::TCPSocket]} {
-            # Presumably this should be wrapped in a catch statement
-            # for cases of lost connection, full buffers, etc.
-            puts -nonewline $::de1(desireSock) "<$command>$data_str\n"
-            flush $::de1(desireSock)
-            return 1
-        }
-    } elseif {$::de1(connectivity) == "USB"} {
-        if {$::runtime == "android"} {
-            ## OTG code goes here
-        } else {
-            ## USBserial code goes here
-        }
-    } else {
-        msg "Connectivity configuration error"
-    }

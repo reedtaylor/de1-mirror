@@ -493,7 +493,7 @@ proc de1_disable_temp_notifications_DEPRECATED_BY_COMMS {} {
 	userdata_append "disable temp notifications" [list ble disable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0D) $::cinstance($::de1(cuuid_0D))]
 }
 
-proc de1_disable_state_notifications {} {
+proc de1_disable_state_notifications_DEPRECATED_BY_COMMS {} {
 	if {[ifexists ::sinstance($::de1(suuid))] == ""} {
 		msg "DE1 not connected, cannot send BLE command 6"
 		return
@@ -1048,24 +1048,25 @@ proc de1_send_shot_frames_DEPRECATED_BY_COMMS {} {
 # sequencing / atomicity of the shotframe BLE writes -- first sending the header, then the frames,
 # in order, and without interruption.  
 # 
-# That makes sense to me in concept but I can't see how these routines makes that guarantee, or how it 
-# differs in a material way from a "normal" BLE write as seen elsewhere in this
+# That makes sense to me in concept but I can't see how these routines live up to that guarantee, as written. 
+# What's here doesn't seem to differ in a material way from a "normal" BLE write as seen elsewhere in this
 # file.
 # 
+# For example:
 # If there was a single proc that called both ble_write_010 and ble_write_00f in sequence, 
-# so that they were both executed within a single call to run_next_userdata_cmd .. then I would
+# so that they were both executed within a single call of run_next_userdata_cmd .. then I would
 # totally get it.  Or, if there was a looping construct in either of these calls that iteratively called
-# [ble write ...] then I woulg also get it.  But I dont see either of those things happening.
+# [ble write ...] then I would also get it.  But I dont see either of those things happening.
 #
 # Instead I see de1_send_shot_frames actually just pushing ble_write_00f and a series of 
-# ble_write_010s onto the cmdstack independently, via userdata_append, just like any other operation.
-# Seems great but it raises the question - what if de1_send_shot_frames instead just used 
+# ble_write_010s onto the cmdstack, independently, via userdata_append, just as any other operation.
+# Seems great, but it raises the question - what if de1_send_shot_frames instead just used 
 # userdata_append to push [ble write ... cuuid_0f] and [ble write ... cuuid10]?  Would that be different
-# to calling these two wrapper functions, which in turn just perform the [ble write...] commands I mentioned,
-# directly?
+# to calling these two wrapper functions (which in turn just perform the [ble write...] commands I mentioned,
+# directly)?
 #
 # Because I couldn't convince myself of the usefulness of these functions I did not preserve these wrappers
-# in the de1_comms layer, and these are now effectively obsolete (unlike most of the other 
+# in the de1_comms layer, so these are now effectively obsolete (unlike most of the other 
 # "_DEPRECATED_BY_COMMS" functions, which were instead ported ino the de1_comms layer -- i.e. the functions
 # themselves are still implemented somewhere)
 proc ble_write_010_DEPRECATED_BY_COMMS {packed_frame} {
@@ -1297,7 +1298,7 @@ proc check_if_initial_connect_didnt_happen_quickly {} {
 }
 
 # REED to JOHN: This looks like dead / obsolete code (starts with an unconditional return).  
-# So I didn't do anything to update to use the new $::connectivity / $::runtime stuff.
+# So I didn't do anything to update what follow to use the new $::de1(connectivity) or $::runtime stuff.
 # However I did see that this function does get called at least once (in autopair_with_de1.tcl),
 # (which may be a line to remove from that file).
 proc ble_find_de1s {} {
