@@ -31,7 +31,16 @@ proc determine_if_android {} {
         . configure -bg black -bd 0
         wm attributes . -fullscreen 1
         set ::some_droid 1
+
+        # ::android and ::undroid are deprecated -- keeping them 
+        # for compatibility with skins and other weird / old stuff
+        if {$::runtime == "android"} {
+            set ::android 1
+        } else {
+            set ::undroid 1
+        }
     }
+
 
 }
 determine_if_android
