@@ -17,7 +17,7 @@ proc setup_environment {} {
     global fontm
     global runtime 
 
-    if {$runtime == "android" || $runtime == undroid} {
+    if {$runtime == "android" || $runtime == "undroid"} {
         #package require BLT
         #namespace import blt::*
         #namespace import -force blt::tile::*
@@ -135,6 +135,7 @@ proc setup_environment {} {
             set fontm [expr {($fontm * .94)}]
         } else {
             # we use the immense google font so that we can handle virtually all of the world's languages with consistency
+            msg "pwd: [pwd]"
             set helvetica_font [sdltk addfont "fonts/notosansuiregular.ttf"]
             set helvetica_bold_font [sdltk addfont "fonts/notosansuibold.ttf"]
             set global_font_name [lindex [sdltk addfont "fonts/NotoSansCJKjp-Regular.otf"] 0]

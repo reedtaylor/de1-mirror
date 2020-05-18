@@ -13,8 +13,8 @@ proc tcp_read_handler {sock} {
 proc tcp_connect_to_de1 {} {
 	msg "tcp_connect_to_de1"
 
-    set tcp_host [ifexists $::settings(de1_tcp_host)]
-    set tcp_port [ifexists $::settings(de1_tcp_port)]
+    set tcp_host [ifexists ::settings(de1_tcp_host)]
+    set tcp_port [ifexists ::settings(de1_tcp_port)]
 
 	if ($tcp_host == "") {
 		msg "Missing TCP hostname, using 'de1' as a fallback"

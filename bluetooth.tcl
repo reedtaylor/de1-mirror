@@ -2056,10 +2056,10 @@ proc de1_ble_handler { event data } {
 									return
 								} elseif {[ifexists weightarray(command)] == 0xAA} {									
 									msg "Decentscale BUTTON $weightarray(data3) pressed"
-									if {[ifexists $weightarray(data3)] == 1} {
+									if {[ifexists weightarray(data3)] == 1} {
 										# button 1 "O" pressed
 										decentscale_tare
-									} elseif {[ifexists $weightarray(data3)] == 2} {
+									} elseif {[ifexists weightarray(data3)] == 2} {
 										# button 2 "[]" pressed
 									}
 								} elseif {[ifexists weightarray(command)] != ""} {

@@ -14,7 +14,7 @@ package provide de1_machine 1.0
 #	de1_address "C1:80:A7:32:CD:A3"
 #	has_flowmeter 0
 
-
+# REED to JOHN in the ::de1 array, the key cuuid_06 is duplicated
 array set ::de1 {
 	firmware_crc ""
 	current_frame_number 0
@@ -44,7 +44,6 @@ array set ::de1 {
 	cuuid_0D "0000A00D-0000-1000-8000-00805F9B34FB"
 	cuuid_0E "0000A00E-0000-1000-8000-00805F9B34FB"
 	cuuid_0F "0000A00F-0000-1000-8000-00805F9B34FB"
-	# REED to JOHN the following key cuuid_06 is duplicated above
 	cuuid_06 "0000A006-0000-1000-8000-00805F9B34FB"
 	cuuid_09 "0000A009-0000-1000-8000-00805F9B34FB"
 	cuuid_10 "0000A010-0000-1000-8000-00805F9B34FB"
@@ -416,6 +415,21 @@ if {[de1plus]} {
 	# default de1plus skin
 	set ::settings(skin) "Insight"
 }
+
+
+proc determine_de1_connectivity {} {
+	if {[ifexists ::settings(de1_preferred_connectivity)] == "tcp"} {
+        set ::de1(connectivity) "tcp"
+    } elseif {[ifexists ::settings(de1_desired_connectivity)] == "usb"} {
+        set ::de1(connectivity) "usb"
+	} elseif {[ifexists ::settings(de1_desired_connectivity)] == "ble"] && $::runtime == "android"} {
+		set ::de1(connectivity) "ble"
+    } else {
+        set ::de1(connectivity) "simulated"
+    }
+	msg "Connectivity determined to be: $::de1(connectivity) (runtime: $::runtime)"
+}
+determine_de1_connectivity
 
 if {$::de1(connectivity) == "simulated"} {
 	set ::settings(ghc_is_installed) 0

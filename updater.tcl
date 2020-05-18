@@ -10,15 +10,7 @@ proc determine_if_android {} {
     set ::runtime "default"
     set ::some_droid 0
 
-    if {[ifexists $::settings(de1_desired_connectivity)] == "tcp"} {
-        set $::de1(connectivity) "tcp"
-    } elseif {[ifexists $::settings(de1_desired_connectivity)] == "usb"} {
-        set $::de1(connectivity) "usb"
-    } else {
-        set $::de1(connectivity) "simulated"
-    }
 
-ife
 
     catch {
         package require BLT
@@ -30,11 +22,8 @@ ife
 
         package require ble
         set ::runtime "android"
-        if {[ifexists $::settings(de1_desired_connectivity)] == "ble"} {
-            set $::de1(connectivity) "ble"
-        }
     }
-
+  
     if {$::runtime == "android" || $::runtime == "undroid"} {
         # turn the background window black as soon as possible
         # and then make it full screen on android/undroid, so as to prepare for the loading of the splash screen
@@ -215,6 +204,7 @@ proc homedir {} {
     global home
     if {[info exists home] != 1} {
         set home [file normalize [file dirname [info script]]]
+        msg "home = $home"
     }
     return $home
 }
