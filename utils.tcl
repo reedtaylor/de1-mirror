@@ -203,7 +203,9 @@ proc setup_environment {} {
         # john 2/12/18 re-enable this when TTS feature is enabled
         # borg speak { }
 
+        source "de1_comms.tcl"
         source "bluetooth.tcl"
+        
 
     } else {
 

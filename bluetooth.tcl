@@ -1258,7 +1258,11 @@ proc android_8_or_newer_DEPRECATED_BY_COMMS {} {
 	#return 0
 }
 
-set ::ble_scanner [ble scanner de1_ble_handler]
+if {$::de1(connectivity) == "ble"} {
+	set ::ble_scanner [ble scanner de1_ble_handler]
+} else {
+	set ::ble_scanner 0
+}
 set ::scanning -1
 
 proc check_if_initial_connect_didnt_happen_quickly {} {
@@ -1297,14 +1301,10 @@ proc check_if_initial_connect_didnt_happen_quickly {} {
 
 }
 
-# REED to JOHN: This looks like dead / obsolete code (starts with an unconditional return).  
-# So I didn't do anything to update what follow to use the new $::de1(connectivity) or $::runtime stuff.
-# However I did see that this function does get called at least once (in autopair_with_de1.tcl),
-# (which may be a line to remove from that file).
 proc ble_find_de1s {} {
 
 	return
-	if {$::android != 1} {
+	if {$::runtime != "android"} {
 		ble_connect_to_de1
 	}
 	
@@ -1334,7 +1334,8 @@ proc bluetooth_connect_to_devices {} {
 	#@return
 	msg "bluetooth_connect_to_devices"
 
-	if {$::android != 1} {
+	# BLE TODO(REED) make sure this is correct, the original code was mildly confusing
+	if {$::de1(connectivity) == "ble"} {
 		ble_connect_to_de1
 	}
 
@@ -1433,7 +1434,7 @@ proc ble_de1_connected {} {
 
 
 proc ble_close_de1 {} {
-	if ($::de1(device_handle) == 0) {
+	if {$::de1(device_handle) == 0} {
 		msg "Tried to close a non-open device handle"
 		return
 	}
@@ -1780,7 +1781,7 @@ proc de1_ble_handler { event data } {
 ###							#start_idle
 ###							#after 2000 de1_enable_calibration_notifications
 ###							#after 3000 de1_read_calibration "temperature"
-						}
+###						}
 
 
 						#if {$::settings(scale_bluetooth_address) != "" && $::de1(scale_device_handle) == 0 } {
@@ -1901,7 +1902,7 @@ proc de1_ble_handler { event data } {
 						# (if possible) and pass that into the generalized event handler
 						# in de1_comms.tcl
 						if {[info exists ::de1_cuuids_to_command_names($cuuid)]} {
-							set command_name = $::de1_cuuids_to_command_names($cuuid)
+							set command_name $::de1_cuuids_to_command_names($cuuid)
 							de1_event_handler $command_name $data
 						}
 ### MOVED TO COMMS (A00D == ShotSample)
@@ -2024,6 +2025,7 @@ proc de1_ble_handler { event data } {
 ###							msg "error"
 ###							#update_de1_state $value
 ###							#msg "Confirmed a00f read from DE1: '[remove_null_terminator $value]'"
+###						}
 
 ### Non-DE1 BLE characteristics start here (e.g. scales), so did not move to de1_comms.tcl
 						if {$cuuid eq "83CDC3D4-3BA2-13FC-CC5E-106C351A9352"} {

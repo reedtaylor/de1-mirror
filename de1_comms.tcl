@@ -1,5 +1,7 @@
 
-package provide de1_comms
+package provide de1_comms 1.0
+
+package require de1_tcp 1.0
 
 set ::failed_attempt_count_connecting_to_de1 0
 set ::successful_de1_connection_count 0
@@ -56,8 +58,6 @@ proc userdata_append {comment cmd} {
 	lappend ::de1(cmdstack) [list $comment $cmd]
 	run_next_userdata_cmd
 }
-
-proc de1_interface {subcommand {}}
 
 proc read_de1_version {} {
 	catch {
@@ -249,7 +249,7 @@ proc start_firmware_update {} {
 	set ::de1(firmware_update_size) [file size [fwfile]]
 
 # REED to JOHN: In bluetooth.tcl the following code is gated by
-# 	if {$::android != 1} {
+# 	if {$::android != 1} 
 # I am not confident I correctly grasped the intent of this if statement.
 # If the statement is true, it looks like we disable certain characteristics 
 # then (after a delay) asynchronously call write_firmware_now.
@@ -377,7 +377,7 @@ proc mmr_read {address length} {
 	userdata_append "MMR requesting read [convert_string_to_hex $mmrlen] bytes of firmware data from [convert_string_to_hex $mmrloc] with '[convert_string_to_hex $data]'" [list de1_comm write ReadFromMMR $data]
 }
 
-proc mmr_write { address length value} {
+proc mmr_write {address length value} {
 	if {[mmr_available] == 0} {
 		msg "Unable to mmr_read because MMR not available"
 		return
@@ -393,7 +393,7 @@ proc mmr_write { address length value} {
 		return
 	}
 
-	if ![de1_real_machine_connected]} {
+	if {![de1_real_machine_connected]} {
 		msg "DE1 not connected, cannot send BLE command 11"
 		return
 	}
@@ -576,9 +576,9 @@ proc run_next_userdata_cmd {} {
 
 proc close_all_comms_and_exit {} {
 
-	if ($::de1(connectivity == "tcp") {
+	if {$::de1(connectivity == "tcp"} {
 		tcp_close_de1
-	} elseif {$::de1(connectivity == "usb") {
+	} elseif {$::de1(connectivity == "usb"} {
 		# USB TODO(REED) usb close
 	}
 
@@ -614,7 +614,7 @@ proc app_exit {} {
 }
 
 proc de1_send_state {comment msg} {
-	if {$![de1_real_machine_connected]} {
+	if {![de1_real_machine_connected]} {
 		msg "DE1 not connected, cannot send command 13"
 		return
 	}
@@ -845,8 +845,6 @@ proc android_8_or_newer {} {
 }
 
 proc connect_to_devices {} {
-
-	#@return
 	msg "connect_to_devices"
 
 	if {$::de1(connectivity) != "ble"} {
@@ -865,17 +863,17 @@ proc connect_to_devices {} {
 	bluetooth_connect_to_devices
 }
 
-
 proc connect_to_de1 {} {
 	msg "connect_to_de1"
 
 	set ::de1(connect_time) 0
 
-	if {$::de1(device_handle) != "0"} {
+	if {$::de1(device_handle) != 0} {
+		# TODO(REED) make sure that on disconnect (elsewhere) we set device_handle to 0
 		msg "disconnecting from DE1"
 		catch {
 			close_de1
-			set ::de1(device_handle) "0"
+			set ::de1(device_handle) 0
 			after 1000 connect_to_de1
 			return
 		}
@@ -903,10 +901,10 @@ proc connect_to_de1 {} {
 
 		# a simulated machine does not need as much initialization, so we do not call the initialization code below
 		return
-	} elseif {$::de1(connectivity)} == "tcp"} {
+	} elseif {$::de1(connectivity) == "tcp"} {
 		# connect to DE1 via TCP
 		tcp_connect_to_de1
-	} elseif {$::de1(connectivity)} == "usb"} {
+	} elseif {$::de1(connectivity) == "usb"} {
 		# USB TODO(REED) usb connect
 	}
 
@@ -939,16 +937,15 @@ proc connect_to_de1 {} {
 #	catch {
 #		fill_ble_listbox
 #	}
-#}
 
 
 proc close_de1 {} {
 	if {$::de1(device_handle) != 0} {
 		if {$::de1(connectivity) == "ble"} {
 			ble_close_de1
-		} elseif ($::de1(connectivity) == "tcp") {
+		} elseif {$::de1(connectivity) == "tcp"} {
 			tcp_close_de1
-		} elseif ($::de1(connectivity) == "usb") {
+		} elseif {$::de1(connectivity) == "usb"} {
 			# USB TODO(REED) usb_close_de1
 		}
 	}
@@ -997,7 +994,7 @@ proc de1_disconnect_handler {} {
 	}
 }
 
-de1_connnect_handler { handle address } {
+proc de1_connect_handler { handle address } {
 	incr ::successful_de1_connection_count
 	set ::failed_attempt_count_connecting_to_de1 0
 
@@ -1011,7 +1008,7 @@ de1_connnect_handler { handle address } {
 
 	#msg "Connected to DE1"
 	set ::de1(device_handle) $handle
-	if ($::de1(connectivity) == "ble") {
+	if {$::de1(connectivity) == "ble"} {
 		append_to_de1_bluetooth_list $address
 	}
 	# USABILITY TODO(REED) use bluetooth list to also display other connections
@@ -1043,6 +1040,10 @@ proc de1_event_handler { command_name data } {
 	set previous_wrote 0
 	set previous_wrote [ifexists ::de1(wrote)]
 
+
+	# TODO(REED) make sure this is exactly right
+	set value [data_to_hex_string $data]
+
 	#msg "Received from DE1: '[remove_null_terminator $value]'"
 	# change notification or read request
 	#de1_ble_new_value $cuuid $value
@@ -1050,7 +1051,7 @@ proc de1_event_handler { command_name data } {
 	#de1_ble_new_value $cuuid $value
 
 
-	if {$command_name == ShotSample} {
+	if {$command_name == "ShotSample"} {
 		set ::de1(last_ping) [clock seconds]
 		set results [update_de1_shotvalue $value]
 		#msg "Shotvalue received: $results" 
@@ -1067,7 +1068,7 @@ proc de1_event_handler { command_name data } {
 				return
 			}
 		}
-	} elseif {$command_name == Versions} {
+	} elseif {$command_name == "Versions"} {
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_version_desc $value arr2
@@ -1080,10 +1081,10 @@ proc de1_event_handler { command_name data } {
 		set ::de1(wrote) 0
 		run_next_userdata_cmd
 
-	} elseif {$command_name == Calibration} {
+	} elseif {$command_name == "Calibration"} {
 		#set ::de1(last_ping) [clock seconds]
 		calibration_received $value
-	} elseif {$command_name == WaterLevels} {
+	} elseif {$command_name == "WaterLevels"} {
 		set ::de1(last_ping) [clock seconds]
 		parse_binary_water_level $value arr2
 		#msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
@@ -1092,7 +1093,7 @@ proc de1_event_handler { command_name data } {
 		set mm [expr {$arr2(Level) + $::de1(water_level_mm_correction)}]
 		set ::de1(water_level) $mm
 		
-	} elseif {$command_name == FWMapRequest} {
+	} elseif {$command_name == "FWMapRequest"} {
 		#set ::de1(last_ping) [clock seconds]
 		parse_map_request $value arr2
 		if {$::de1(currently_erasing_firmware) == 1 && [ifexists arr2(FWToErase)] == 0} {
@@ -1114,7 +1115,7 @@ proc de1_event_handler { command_name data } {
 		} else {
 			msg "unknown firmware cmd ack recved: [string length $value] bytes: $value : [array get arr2]"
 		}
-	} elseif {$command_name == ShotSettings} {
+	} elseif {$command_name == "ShotSettings"} {
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_hotwater_desc $value arr2
@@ -1122,22 +1123,22 @@ proc de1_event_handler { command_name data } {
 
 		#update_de1_substate $value
 		#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
-	} elseif {$command_name == DeprecatedShotDesc} {
+	} elseif {$command_name == "DeprecatedShotDesc"} {
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_shot_desc $value arr2
 		msg "shot data received [string length $value] bytes: $value  : [array get arr2]"
-	} elseif {$command_name = HeaderWrite} {
+	} elseif {$command_name == "HeaderWrite"} {
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_shotdescheader $value arr2
 		msg "READ shot header success: [string length $value] bytes: $value  : [array get arr2]"
-	} elseif {$command_name == FrameWrite} {
+	} elseif {$command_name == "FrameWrite"} {
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_shotframe $value arr2
 		msg "shot frame received [string length $value] bytes: $value  : [array get arr2]"
-	} elseif {$command_name == StateInfo} {
+	} elseif {$command_name == "StateInfo"} {
 		set ::de1(last_ping) [clock seconds]
 		update_de1_state $value
 
@@ -1153,7 +1154,7 @@ proc de1_event_handler { command_name data } {
 		#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
 		set ::de1(wrote) 0
 		run_next_userdata_cmd
-	} elseif {$command_name == ReadFromMMR} {
+	} elseif {$command_name == "ReadFromMMR"} {
 		# MMR read
 		msg "MMR recv read: '[convert_string_to_hex $value]'"
 
@@ -1295,7 +1296,7 @@ proc de1_comm {action command_name data} {
 		} else {
 			msg "Unknown communication action: $action $command_name"
 		}
-	} elseif ($::de1(connectivity) == "tcp" || $::de1(connectivity) == "usb") {
+	} elseif {$::de1(connectivity) == "tcp" || $::de1(connectivity) == "usb"} {
 		# TODO(REED) decide whether to move this into a TCP specific proc .. might actually not want to do this
 		# since fileio is I think the same... to wit
 		# USB TODO(REED) make sure usb works properly i.e. uses a fielhandle and not some weird serial comms at this stage

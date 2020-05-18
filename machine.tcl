@@ -1,6 +1,6 @@
 package provide de1_machine 1.0
 
-#set ::debugging 0
+set ::debugging 1
 
 # ray's DE1 address (usb key #?)
 # de1_address "EE:01:68:94:A5:48"

@@ -1761,7 +1761,7 @@ proc ui_startup {} {
 	puts "setup_environment"
 	load_settings
 	setup_environment
-	bluetooth_connect_to_devices
+	connect_to_devices
 	shot_history_export
 	shot_history_count_profile_use
 	#ble_find_de1s
