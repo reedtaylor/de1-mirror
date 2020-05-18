@@ -49,10 +49,10 @@ proc tcp_connect_to_de1 {} {
 
 proc tcp_de1_connected {} {
 	# TCP TODO(REED) TCP is_connected check should really check if the socket is still open
-	if {[$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
-		return true
+	if {$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
+		return 1
 	} 
-	return false
+	return 0
 }
 
 proc tcp_close_de1 {} {

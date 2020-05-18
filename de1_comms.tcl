@@ -10,10 +10,10 @@ proc de1_real_machine {} {
 	if {$::de1(connectivity) == "ble"} {
 		return true
 	} 
-	if {$::de1(connectivity) == "TCP"} {
+	if {$::de1(connectivity) == "tcp"} {
 		return true
 	} 
-	if {$::de1(connectivity) == "USB"} {
+	if {$::de1(connectivity) == "usb"} {
 		return true
 	} 
 
@@ -522,14 +522,15 @@ proc de1_send_waterlevel_settings {} {
 ### {$::de1(connectivity) == "ble"}, while still preserving the logic of setting and unsetting
 ### de1(wrote) ... which would make the "one command at a time" ve "not" an easy choice to revert.
 proc run_next_userdata_cmd {} {
-	# only write one command at a time.  this protection was implemented for BLE
-	# but currently retained for all forms of connectivity (safer).
-	if {$::de1(wrote) == 1} {
-		#msg "Do no write, already writing to DE1"
+	# only write one command at a time.  this protection only works for BLE as it gets unset
+	# by an asynchronous "ACK" of the write
+	if {$::de1(connectivity) == "ble" && $::de1(wrote) == 1} {
+		msg "Do not write, already writing to DE1"
 		return
 	}
 
 	if {![de1_real_machine_connected]} {
+		msg "Do no write, DE1 not connected"
 		return
 	}
 
@@ -1036,13 +1037,10 @@ proc de1_connect_handler { handle address } {
 	}
 }
 
-proc de1_event_handler { command_name data } {
+proc de1_event_handler { command_name value } {
 	set previous_wrote 0
 	set previous_wrote [ifexists ::de1(wrote)]
 
-
-	# TODO(REED) make sure this is exactly right
-	set value [data_to_hex_string $data]
 
 	#msg "Received from DE1: '[remove_null_terminator $value]'"
 	# change notification or read request
@@ -1072,7 +1070,7 @@ proc de1_event_handler { command_name data } {
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_version_desc $value arr2
-		msg "version data received [string length $value] bytes: '$value' \"[convert_string_to_hex $value]\"  : '[array get arr2]'/ $event $data"
+		msg "version data received [string length $value] bytes: '$value' \"[convert_string_to_hex $value]\""
 		set ::de1(version) [array get arr2]
 
 		# run stuff that depends on the BLE API version
@@ -1087,7 +1085,7 @@ proc de1_event_handler { command_name data } {
 	} elseif {$command_name == "WaterLevels"} {
 		set ::de1(last_ping) [clock seconds]
 		parse_binary_water_level $value arr2
-		#msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
+		msg "water level data received [string length $value] bytes: $value  : [array get arr2]"
 
 		# compensate for the fact that we measure water level a few mm higher than the water uptake point
 		set mm [expr {$arr2(Level) + $::de1(water_level_mm_correction)}]
@@ -1140,6 +1138,7 @@ proc de1_event_handler { command_name data } {
 		msg "shot frame received [string length $value] bytes: $value  : [array get arr2]"
 	} elseif {$command_name == "StateInfo"} {
 		set ::de1(last_ping) [clock seconds]
+		msg "stateinfo received [string length $value] bytes: $value  : \"[convert_string_to_hex $value]\""
 		update_de1_state $value
 
 		#if {[info exists ::globals(if_in_sleep_move_to_idle)] == 1} {
@@ -1191,7 +1190,7 @@ proc de1_event_handler { command_name data } {
 			msg "Read: steam_highflow_start: '$mmr_val'"
 			set ::settings(steam_highflow_start) $mmr_val
 		} else {
-			msg "Uknown type of direct MMR read on '[convert_string_to_hex $mmr_id]': $data"
+			msg "Uknown type of direct MMR read on '[convert_string_to_hex $mmr_id]': $value"
 		}
 
 	} else {
@@ -1285,7 +1284,8 @@ proc data_to_hex_string {data} {
     return [binary encode hex $data]
 }
 
-proc de1_comm {action command_name data} {
+proc de1_comm {action command_name {data 0}} {
+	msg "de1_comm sending action $action command $command_name ($::de1_command_names_to_serial_handles($command_name)) data \"$data\""
 	if {$::de1(connectivity) == "ble"} {
 		# TODO(REED) move this into a single proc in BLE land
 		set current_cuuid $::de1_command_names_to_cuuids($command_name)
@@ -1317,6 +1317,11 @@ proc de1_comm {action command_name data} {
 		}
 		# we don't want buffering to delay sending our messages, so force flush 
 		flush $::de1(device_handle)
+
+		# we don't get an explicit ack, but we're done now
+		msg "de1_comm sent: $serial_str"
+		set ::de1(wrote) 0		
+		return 1
 	}
 }
 

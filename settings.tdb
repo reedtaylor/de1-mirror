@@ -12,7 +12,9 @@ battery_medium_brightness 70
 battery_medium_trigger 90
 battery_very_low_brightness 10
 battery_very_low_trigger 30
+bean_brand {}
 bean_notes {}
+bean_type {}
 ble_unpair_at_exit 1
 bluetooth_address {}
 chart_dashes_espresso_weight {2 1}
@@ -46,6 +48,7 @@ drink_ey 0
 drink_tds 0
 drink_weight 0
 enable_ampm 0
+enable_commanumbers 0
 enable_fahrenheit 0
 enable_fluid_ounces 0
 enable_negative_flow_charts 0
@@ -57,13 +60,13 @@ espresso_count 0
 espresso_decline_time 25
 espresso_enjoyment 0
 espresso_hold_time 10
-espresso_max_time 60
+espresso_max_time 40.0
 espresso_notes {}
 espresso_pressure 9.2
 espresso_step_1 pressure
 espresso_step_2 pressure
 espresso_step_3 pressure
-espresso_temperature 92
+espresso_temperature 92.0
 espresso_typical_volume 200
 export_history_automatically_to_csv 1
 fan_threshold 45
@@ -96,6 +99,8 @@ god_espresso_name {}
 god_espresso_pressure {}
 god_espresso_temperature_basket {}
 grinder_dose_weight 0
+grinder_model {}
+grinder_setting {}
 has_refractometer 1
 has_scale 1
 history_saved 0
@@ -109,12 +114,12 @@ machine_name {pretty decent}
 max_ble_connect_attempts 3
 max_steam_pressure 3
 max_stop_at_weight 500
-minimum_water_temperature 80
+minimum_water_temperature 1
 my_name {}
 name {}
 one_tap_mode 0
 orientation landscape
-preheat_temperature 95
+preheat_temperature 90
 preheat_volume 50
 preinfusion_enabled 1
 preinfusion_flow_rate 4
@@ -139,6 +144,10 @@ profile_graph_smoothing_technique quadratic
 profile_has_changed 0
 profile_notes {}
 profile_step {}
+profile_title {}
+profile_to_save default
+roast_date {}
+roast_level {}
 saver_brightness 0
 scale_bluetooth_address {}
 scale_button_starts_espresso 0
@@ -157,7 +166,7 @@ seconds_to_display_done_flush 300
 seconds_to_display_done_hotwater 300
 seconds_to_display_done_steam 300
 settings_1_page settings_1
-settings_profile_type settings_2
+settings_profile_type settings_2a
 shot_weight_percentage_stop 79
 should_save_history 1
 show_mixtemp_during_espresso 0
@@ -168,7 +177,7 @@ sound_button_out 11
 speaking_pitch 1.0
 speaking_rate 1.5
 start_espresso_only_if_scale_connected 0
-steam_flow 700
+steam_flow 80
 steam_highflow_start 70
 steam_max_time 120
 steam_over_pressure_count_trigger 10
@@ -177,7 +186,7 @@ steam_over_temp_count_trigger 10
 steam_over_temp_threshold 180
 steam_temperature 160
 steam_timeout 120
-steaming_count 0
+steaming_count 13
 stop_weight_before_seconds 2.8
 stress_test 0
 tank_desired_water_temperature 0
