@@ -97,3 +97,4 @@ old/*
 
 # End of https://www.gitignore.io/api/osx,visualstudiocode,emacs
 de1-daybreak.code-workspace
+log.txt
