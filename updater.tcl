@@ -36,8 +36,10 @@ proc determine_if_android {} {
         # for compatibility with skins and other weird / old stuff
         if {$::runtime == "android"} {
             set ::android 1
+            set ::undroid 0
         } else {
             set ::undroid 1
+            set ::android 0
         }
     }
 
