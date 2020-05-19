@@ -1335,7 +1335,6 @@ proc bluetooth_connect_to_devices {} {
 	#@return
 	msg "bluetooth_connect_to_devices"
 
-	# BLE TODO(REED) make sure this is correct, the original code was mildly confusing
 	if {$::de1(connectivity) == "ble"} {
 		ble_connect_to_de1
 	}

@@ -23,13 +23,12 @@ proc tcp_connect_to_de1 {} {
 	msg "tcp_connect_to_de1"
 
     set tcp_host [ifexists ::settings(de1_tcp_host)]
-    set tcp_port [ifexists ::settings(de1_tcp_port)]
-
 	if {$tcp_host == ""} {
 		msg "Missing TCP hostname, using 'de1' as a fallback"
 		set tcp_host "de1"
 	}
 
+    set tcp_port [ifexists ::settings(de1_tcp_port)]
 	if {$tcp_port == ""} {
 		msg "Missing TCP port, using 9090 as a fallback"
 		set tcp_port "9090"
@@ -37,24 +36,30 @@ proc tcp_connect_to_de1 {} {
 
     set ::de1(device_handle) [socket $tcp_host $tcp_port]
     fileevent $::de1(device_handle) readable [list tcp_read_handler $::de1(device_handle)]
-    fconfigure $::de1(device_handle) -buffering line
-
-	# borrowed from fast_write_open -- need to make sure this plays nicely with flush()
-	fconfigure $::de1(device_handle) -blocking 0
+    chan configure $::de1(device_handle) -buffering line
+	chan configure $::de1(device_handle) -blocking 0
 
 	# TCP TODO(REED) check if connection was successful and then call this
-	# (also need to fix this up, e.g. figure what "address" should be)
 	de1_connect_handler $::de1(device_handle) "$tcp_host:$tcp_port"
 }
 
 proc tcp_de1_connected {} {
 	# TCP TODO(REED) TCP is_connected check should really check if the socket is still open
 	if {$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
+		if {[chan eof $::de1(device_handle)] || [chan pending input $::de1(device_handle)] == -1} {
+			msg "tcp channel closed by remote host"
+			tcp_close_de1
+			return 0
+		}
 		return 1
-	} 
-	return 0
+	} else {
+		return 0
+	}
 }
 
 proc tcp_close_de1 {} {
-	# TCP TODO(REED) close
+    catch {
+		close $::de1(device_handle)
+	}
+	set ::de1(device_handle) 0
 }

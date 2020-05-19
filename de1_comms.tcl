@@ -577,15 +577,12 @@ proc run_next_userdata_cmd {} {
 
 proc close_all_comms_and_exit {} {
 
-	if {$::de1(connectivity) == "tcp"} {
-		tcp_close_de1
-	} elseif {$::de1(connectivity) == "usb"} {
-		# USB TODO(REED) usb close
-	}
+	close_de1
 
-	# unconditionallly call the ble-specific routine close connections.
-	# this will disconnect the de1 if connectivity is BLE, but also handles cleanly disconnecting from other
-	# potential BLE devices (scales and whatnot)
+	# unconditionallly call the ble-specific close routine as a way to wrap up
+	# this will disconnect the de1 if connectivity is BLE (if needed)
+	# but also handles cleanly disconnecting from other potential BLE 
+	# devices (scales and whatnot)
 	close_all_ble_and_exit
 }	
 
