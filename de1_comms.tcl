@@ -577,9 +577,9 @@ proc run_next_userdata_cmd {} {
 
 proc close_all_comms_and_exit {} {
 
-	if {$::de1(connectivity == "tcp"} {
+	if {$::de1(connectivity) == "tcp"} {
 		tcp_close_de1
-	} elseif {$::de1(connectivity == "usb"} {
+	} elseif {$::de1(connectivity) == "usb"} {
 		# USB TODO(REED) usb close
 	}
 

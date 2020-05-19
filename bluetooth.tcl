@@ -1258,7 +1258,8 @@ proc android_8_or_newer_DEPRECATED_BY_COMMS {} {
 	#return 0
 }
 
-if {$::de1(connectivity) == "ble"} {
+if {$::runtime == "android"} {
+	# we do this even if de1(connectivity) is not "ble" because we might still want to pair to scales etc
 	set ::ble_scanner [ble scanner de1_ble_handler]
 } else {
 	set ::ble_scanner 0
@@ -1629,7 +1630,11 @@ proc de1_ble_handler { event data } {
 		    connection {
 				if {$state eq "disconnected"} {
 					if {$address == $::settings(bluetooth_address)} {
-					   de1_disconnect_handler $handle
+						if {$::de1(connectivity) == "ble"} {
+							de1_disconnect_handler
+						} else {
+							msg "inactive BLE connection to DE1 reports disconnect"
+						}
 ### MOVED TO COMMS and also to proc ble_close_de1 below
 ###			    		set ::de1(wrote) 0
 ###			    		set ::de1(cmdstack) {}
@@ -1903,7 +1908,7 @@ proc de1_ble_handler { event data } {
 						# in de1_comms.tcl
 						if {[info exists ::de1_cuuids_to_command_names($cuuid)]} {
 							set command_name $::de1_cuuids_to_command_names($cuuid)
-							de1_event_handler $command_name $data
+							de1_event_handler $command_name [dict get $data value]
 						}
 ### MOVED TO COMMS (A00D == ShotSample)
 ###						if {$cuuid == "0000A00D-0000-1000-8000-00805F9B34FB"} {

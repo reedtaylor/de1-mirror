@@ -1,7 +1,5 @@
 package provide de1_machine 1.0
 
-set ::debugging 1
-
 # ray's DE1 address (usb key #?)
 # de1_address "EE:01:68:94:A5:48"
 
@@ -406,7 +404,7 @@ array set ::settings {
 	preheat_temperature 95
 	water_volume 50
     ghc_is_installed 0
-	de1_preferred_connectivity "tcp"
+	de1_preferred_connectivity "ble"
 	de1_tcp_host "de1"
 	de1_tcp_port "9090"
 }
@@ -420,9 +418,9 @@ if {[de1plus]} {
 proc determine_de1_connectivity {} {
 	if {[ifexists ::settings(de1_preferred_connectivity)] == "tcp"} {
         set ::de1(connectivity) "tcp"
-    } elseif {[ifexists ::settings(de1_desired_connectivity)] == "usb"} {
+    } elseif {[ifexists ::settings(de1_preferred_connectivity)] == "usb"} {
         set ::de1(connectivity) "usb"
-	} elseif {[ifexists ::settings(de1_desired_connectivity)] == "ble"] && $::runtime == "android"} {
+	} elseif {[ifexists ::settings(de1_preferred_connectivity)] == "ble" && $::runtime == "android"} {
 		set ::de1(connectivity) "ble"
     } else {
         set ::de1(connectivity) "simulated"
