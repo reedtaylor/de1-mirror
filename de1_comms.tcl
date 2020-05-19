@@ -905,19 +905,21 @@ proc connect_to_de1 {} {
 	} elseif {$::de1(connectivity) == "usb"} {
 		# USB TODO(REED) usb connect
 	}
-
-	# subscribe and initialize outside
-	# what happens during BLE enumeration using the recommendations from here: 
-	# https://3.basecamp.com/3671212/buckets/7351439/messages/1976315941#__recording_2008131794
-	de1_enable_temp_notifications
-	de1_enable_water_level_notifications
-	de1_send_steam_hotwater_settings
-	de1_send_shot_frames
-	read_de1_version
-	de1_enable_state_notifications
-	read_de1_state
 }
 
+proc de1_check_new_connection {handle address} {
+	if {[de1_real_machine_connected]} {
+		msg "de1_check_new_connection: Connection established"
+		de1_connect_handler $handle $address
+	} else {
+		# retry connection, along the same lines as what the BLE scanner does.
+		# (note we do not just port the "scanner" into comms (for BLE+TCP+USB) because the actual  
+		# ble scanner itself may still be used to look for e.g. scales, and it seems needlessly
+		# complex / confusing to have two things called "scanner" happening at the same time 
+		msg "de1_check_new_connection: Connection not yet established"
+		de1_disconnect_handler
+	}
+}
 
 # USABILITY TCP USB TODO(REED) consider resurrecting this to shim a "connect via tcp" fake machine entry
 # into the BT connection UI?
@@ -975,7 +977,8 @@ proc de1_disconnect_handler {} {
 
 	close_de1
 
-	# NAMING TODO(REED) "ble" in settings name to be cleaned up
+	# NAMING TODO(REED) "ble" shouldn't really be in the settings name..  
+	# would be good to clean up....  but renaming settings is annoying
 	set ::settings(max_ble_connect_attempts) 10
 
 	incr ::failed_attempt_count_connecting_to_de1
@@ -996,7 +999,6 @@ proc de1_connect_handler { handle address } {
 	incr ::successful_de1_connection_count
 	set ::failed_attempt_count_connecting_to_de1 0
 
-
 	set ::de1(wrote) 0
 	set ::de1(cmdstack) {}
 	#set ::de1(found) 1
@@ -1016,17 +1018,25 @@ proc de1_connect_handler { handle address } {
 	if {$testing == 1} {
 		de1_read_calibration "temperature"
 	} else {
-
-		#set ::globals(if_in_sleep_move_to_idle) 0
-
-		# vital stuff, do first
-		#read_de1_state
+		# subscribe and initialize to the various things that would otherwise happen
+		# what happens during BLE enumeration.
+		# this is kind of a mishmash of things found in the code as well as the 
+		# recommendations from here: 
+		# https://3.basecamp.com/3671212/buckets/7351439/messages/1976315941#__recording_2008131794
+		# so this might not be optimal (e.g. may have needless dupes)
 		de1_enable_temp_notifications
+		de1_enable_water_level_notifications
+		de1_send_steam_hotwater_settings
+		de1_send_shot_frames
+		read_de1_version
+		de1_enable_state_notifications
+		read_de1_state
 		if {[info exists ::de1(first_connection_was_made)] != 1} {
 			# on app startup, wake the machine up
 			set ::de1(first_connection_was_made) 1
 			start_idle
 		}
+		later_new_de1_connection_setup
 		read_de1_version
 		read_de1_state
 		
@@ -1037,7 +1047,6 @@ proc de1_connect_handler { handle address } {
 proc de1_event_handler { command_name value } {
 	set previous_wrote 0
 	set previous_wrote [ifexists ::de1(wrote)]
-
 
 	#msg "Received from DE1: '[remove_null_terminator $value]'"
 	# change notification or read request

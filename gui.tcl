@@ -1017,9 +1017,9 @@ proc de1_connected_state { {hide_delay 0} } {
 		if {$::de1(device_handle) == 0} {
 			#return "[translate Connecting]"
 			if {$elapsed > 600} {
-				if {$::scanning == 1} {
+				if {$::de1(connectivity) == "ble" && $::scanning == 1} {
 					return "[translate Searching]"
-				} elseif {$::scanning == -1} {
+				} elseif {$::de1(connectivity) == "ble" && $::scanning == -1} {
 					return [translate "Disconnected"]
 					#return "[translate Starting]"
 				}
@@ -1037,6 +1037,10 @@ proc de1_connected_state { {hide_delay 0} } {
 				#ble_find_de1s
 				#ble_connect_to_de1
 				return [translate "Disconnected"]
+			}
+			if {$::de1(connectivity) != "ble"} {
+				# not calling this for BLE since these events are handled inside the GATT
+				de1_disconnect_handler
 			}
 			return [subst {[translate "Disconnected"] : $since_last_ping}]
 		}

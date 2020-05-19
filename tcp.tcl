@@ -2,7 +2,13 @@ package provide de1_tcp 1.0
 
 
 proc tcp_read_handler {sock} {
-    set inString [gets $sock]
+	if { [catch {set inString [gets $sock]} ] || ![tcp_de1_connected]} {
+		msg "failure during TCP socket read"
+		de1_disconnect_handler
+		return
+	}
+
+	# TODO(REED) maybe check for chan blocking
 
 	if {![regexp -nocase {^\[[A-R]\]([0-9A-F][0-9A-F])+$} $inString]} {
 		msg "Dropping invalid message: $inString"
@@ -34,27 +40,32 @@ proc tcp_connect_to_de1 {} {
 		set tcp_port "9090"
 	}
 
+	catch {
     set ::de1(device_handle) [socket $tcp_host $tcp_port]
     fileevent $::de1(device_handle) readable [list tcp_read_handler $::de1(device_handle)]
     chan configure $::de1(device_handle) -buffering line
 	chan configure $::de1(device_handle) -blocking 0
+	}
+	
+	# check if connection was successful and then call connect handler
 
-	# TCP TODO(REED) check if connection was successful and then call this
-	de1_connect_handler $::de1(device_handle) "$tcp_host:$tcp_port"
+
+	after 500 de1_check_new_connection $::de1(device_handle) "$tcp_host:$tcp_port"
 }
 
 proc tcp_de1_connected {} {
-	# TCP TODO(REED) TCP is_connected check should really check if the socket is still open
 	if {$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
-		if {[chan eof $::de1(device_handle)] || [chan pending input $::de1(device_handle)] == -1} {
-			msg "tcp channel closed by remote host"
-			tcp_close_de1
-			return 0
-		}
-		return 1
+		if { [catch {
+			if {[chan eof $::de1(device_handle)] || [chan pending input $::de1(device_handle)] == -1} {
+				msg "tcp channel closed by remote host"
+				de1_disconnect_handler
+				return 0
+			} 
+		} ] } {return 0} 
 	} else {
 		return 0
 	}
+	return 1
 }
 
 proc tcp_close_de1 {} {
