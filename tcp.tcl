@@ -50,6 +50,7 @@ proc tcp_connect_to_de1 {} {
 	}
 }
 
+# TODO(REED) - are we handling the no-connection-at-startup-time case correctly?  verify and fix
 
 proc tcp_timeout_handler {} {
 	msg "TCP connection timeout"
