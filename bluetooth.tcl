@@ -1630,6 +1630,7 @@ proc de1_ble_handler { event data } {
 				if {$state eq "disconnected"} {
 					if {$address == $::settings(bluetooth_address)} {
 						if {$::de1(connectivity) == "ble"} {
+							msg "de1_ble_handler reports de1 disconnect" 
 							de1_disconnect_handler
 						} else {
 							msg "inactive BLE connection to DE1 reports disconnect"

@@ -907,19 +907,6 @@ proc connect_to_de1 {} {
 	}
 }
 
-proc de1_check_new_connection {handle address} {
-	if {[de1_real_machine_connected]} {
-		msg "de1_check_new_connection: Connection established"
-		de1_connect_handler $handle $address
-	} else {
-		# retry connection, along the same lines as what the BLE scanner does.
-		# (note we do not just port the "scanner" into comms (for BLE+TCP+USB) because the actual  
-		# ble scanner itself may still be used to look for e.g. scales, and it seems needlessly
-		# complex / confusing to have two things called "scanner" happening at the same time 
-		msg "de1_check_new_connection: Connection not yet established"
-		de1_disconnect_handler
-	}
-}
 
 # USABILITY TCP USB TODO(REED) consider resurrecting this to shim a "connect via tcp" fake machine entry
 # into the BT connection UI?

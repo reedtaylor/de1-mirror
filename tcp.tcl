@@ -3,7 +3,7 @@ package provide de1_tcp 1.0
 
 proc tcp_read_handler {sock} {
 	if { [catch {set inString [gets $sock]} ] || ![tcp_de1_connected]} {
-		msg "failure during TCP socket read"
+		msg "failure during TCP socket read - handling disconnect"
 		de1_disconnect_handler
 		return
 	}
@@ -41,17 +41,44 @@ proc tcp_connect_to_de1 {} {
 	}
 
 	catch {
-    set ::de1(device_handle) [socket $tcp_host $tcp_port]
-    fileevent $::de1(device_handle) readable [list tcp_read_handler $::de1(device_handle)]
-    chan configure $::de1(device_handle) -buffering line
-	chan configure $::de1(device_handle) -blocking 0
+		msg "initiating TCP connection to $tcp_host:$tcp_port"
+		set ::de1(device_handle) [socket -async $tcp_host $tcp_port]
+		set tcp_timeout_event [after 10000 tcp_timeout_handler]
+
+		# handle successful connection when this becomes writeable
+		fileevent $::de1(device_handle) writable [list tcp_connect_handler $tcp_timeout_event $tcp_host $tcp_port]
 	}
-	
-	# check if connection was successful and then call connect handler
-
-
-	after 500 de1_check_new_connection $::de1(device_handle) "$tcp_host:$tcp_port"
 }
+
+
+proc tcp_timeout_handler {} {
+	msg "TCP connection timeout"
+	after 500 de1_disconnect_handler
+}
+
+proc tcp_connect_handler {tcp_timeout_event tcp_host tcp_port} {
+	# cancel the timeout
+	after cancel $tcp_timeout_event
+
+    # check connect success or fail
+    set error [fconfigure $::de1(device_handle) -error]
+    if {$error ne ""} {
+		msg "TCP connection failed with error: $error"
+        catch {close $::de1(device_handle)}
+        after 500 de1_disconnect_handler
+    } else {
+		# disable writable event that triggered this handler, to avoid a loop
+	    fileevent $::de1(device_handle) writable ""
+
+		# install readable event handler
+		fileevent $::de1(device_handle) readable [list tcp_read_handler $::de1(device_handle)]
+		chan configure $::de1(device_handle) -buffering line
+		chan configure $::de1(device_handle) -blocking 0
+
+		de1_connect_handler $::de1(device_handle) "$tcp_host:$tcp_port"
+	}
+}
+
 
 proc tcp_de1_connected {} {
 	if {$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
