@@ -31,7 +31,7 @@ proc de1_real_machine_connected {} {
 	} elseif {$::de1(connectivity) == "tcp"} {
 		return [tcp_de1_connected]
 	} elseif {$::de1(connectivity) == "usb"} {
-		# USB TODO(REED) - usb connectivity check
+		# USB +++ TODO(REED) - usb connectivity check
 	}
 
 	return false
@@ -867,8 +867,7 @@ proc connect_to_de1 {} {
 	set ::de1(connect_time) 0
 
 	if {$::de1(device_handle) != 0} {
-		# TODO(REED) make sure that on disconnect (elsewhere) we set device_handle to 0
-		msg "disconnecting from DE1"
+		msg "connect_to_de1: disconnecting from DE1"
 		catch {
 			close_de1
 			set ::de1(device_handle) 0
@@ -876,6 +875,14 @@ proc connect_to_de1 {} {
 			return
 		}
 	}
+
+	if {[info exists ::currently_connecting_de1_handle] && $::currently_connecting_de1_handle != 0} {
+		msg "connect_to_de1: terminating previous connection attempt"
+		catch {
+			close $::currently_connecting_de1_handle
+		}
+	}
+	set ::currently_connecting_de1_handle 0
     set ::de1_name "DE1"
 
 	if {$::de1(connectivity) == "ble"} {
@@ -897,19 +904,25 @@ proc connect_to_de1 {} {
 		parse_binary_version_desc $version_value arr2
 		set ::de1(version) [array get arr2]
 
-		# a simulated machine does not need as much initialization, so we do not call the initialization code below
+		# a simulated machine does not need as much initialization, so we do not call all of the initialization stuff
+		# that is needed for "real" non-ble comms 
 		return
 	} elseif {$::de1(connectivity) == "tcp"} {
 		# connect to DE1 via TCP
-		tcp_connect_to_de1
+		msg "connect_to_de1: initiating TCP connection"
+		return [tcp_connect_to_de1]
 	} elseif {$::de1(connectivity) == "usb"} {
-		# USB TODO(REED) usb connect
+		# USB +++ TODO(REED) usb connect
+	} else {
+		msg "connect_to_de1: unexpected connectivity type"
 	}
 }
 
 
-# USABILITY TCP USB TODO(REED) consider resurrecting this to shim a "connect via tcp" fake machine entry
-# into the BT connection UI?
+# USABILITY TCP USB TODO(REED) we could move this code from the bluetooth.tcl implememtation, to more generically
+# show a "connection list" instead of a "bluetooth list".  So for example a TCP host:port could be shown
+# see also proc scanning_state_text
+
 #proc append_to_de1_bluetooth_list {address} {
 #	set newlist $::de1_bluetooth_list
 #	lappend newlist $address
@@ -933,7 +946,7 @@ proc close_de1 {} {
 		} elseif {$::de1(connectivity) == "tcp"} {
 			tcp_close_de1
 		} elseif {$::de1(connectivity) == "usb"} {
-			# USB TODO(REED) usb_close_de1
+			# USB +++ TODO(REED) usb_close_de1
 		}
 	}
 	set ::de1(device_handle) 0
@@ -959,26 +972,39 @@ proc de1_disconnect_handler {} {
 	set ::de1(wrote) 0
 	set ::de1(cmdstack) {}
 
-	set ::currently_connecting_de1_handle 0
-	msg "de1 disconnected"
 
-	close_de1
+	if {$::de1(device_handle) != 0} {
+		msg "de1_disconnect_handler: de1 newly disconnected"
+		catch {
+			close_de1
+			close $::currently_connecting_de1_handle
+		}
+		set ::de1(device_handle) 0
+		set ::currently_connecting_de1_handle 0
+	}
 
-	# NAMING TODO(REED) "ble" shouldn't really be in the settings name..  
-	# would be good to clean up....  but renaming settings is annoying
-	set ::settings(max_ble_connect_attempts) 10
 
-	incr ::failed_attempt_count_connecting_to_de1
-	if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
-		# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
-		# and we'll try again to reconnect when the user taps the screen to leave sleep mode
+	if {$::currently_connecting_de1_handle == 0} {
+		msg "de1_disconnect_handler: initiating new connection"
+		# READABILITY TODO(REED) "ble" shouldn't really be in the settings name.
+		# would be good for readability to clean that up....  but renaming settings seems annoying so I am not going to 
+		# tackle it now
+		set ::settings(max_ble_connect_attempts) 10
 
-		# set this to zero so that when we come back from sleep we try several times to connect
-		set ::failed_attempt_count_connecting_to_de1 0
+		incr ::failed_attempt_count_connecting_to_de1
+		if {$::failed_attempt_count_connecting_to_de1 > $::settings(max_ble_connect_attempts) && $::successful_de1_connection_count > 0} {
+			# if we have previously been connected to a DE1 but now can't connect, then make the UI go to Sleep
+			# and we'll try again to reconnect when the user taps the screen to leave sleep mode
 
-		update_de1_state "$::de1_state(Sleep)\x0"
+			# set this to zero so that when we come back from sleep we try several times to connect
+			set ::failed_attempt_count_connecting_to_de1 0
+
+			update_de1_state "$::de1_state(Sleep)\x0"
+		} else {
+			connect_to_de1
+		}
 	} else {
-		connect_to_de1
+		msg "de1_disconnect_handler: reconnect attempt already active; not initiating new connection"
 	}
 }
 
@@ -998,7 +1024,8 @@ proc de1_connect_handler { handle address } {
 	if {$::de1(connectivity) == "ble"} {
 		append_to_de1_bluetooth_list $address
 	}
-	# USABILITY TODO(REED) use bluetooth list to also display other connections
+	# USABILITY TODO(REED) could use the "bluetooth" list to also display other connections
+	# see also proc scanning_state_text, proc append_to_de1_bluetooth_list
 
 	#msg "connected to de1 with handle $handle"
 	set testing 0
@@ -1242,16 +1269,8 @@ proc after_shot_weight_hit_update_final_weight {} {
 
 }
 
-# USB TODO(REED) - use this?
-proc fast_write_open {fn parms} {
-    set f [open $fn $parms]
-    fconfigure $f -blocking 0
-    fconfigure $f -buffersize 1000000
-    return $f
-}
-
-
-# USABILITY TODO(REED) Consider resurrecting this for status on the settings page
+# USABILITY TODO(REED) Consider resurrecting this for status on the settings page.
+# see also proc append_to_de1_bluetooth_list
 #proc scanning_state_text {} {
 #	if {$::scanning == 1} {
 #		return [translate "Searching"]
@@ -1280,30 +1299,22 @@ proc data_to_hex_string {data} {
 proc de1_comm {action command_name {data 0}} {
 	msg "de1_comm sending action $action command $command_name ($::de1_command_names_to_serial_handles($command_name)) data \"$data\""
 	if {$::de1(connectivity) == "ble"} {
-		# TODO(REED) move this into a single proc in BLE land
-		set current_cuuid $::de1_command_names_to_cuuids($command_name)
-		if {$action == "read" || $action == "enable" || $action == "disable"} {
-			return [ble $action $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $current_cuuid   $::cinstance($current_cuuid)]
-		} elseif {$action == "write"} {
-			return [ble $action $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $current_cuuid   $::cinstance($current_cuuid)   $data]
-		} else {
-			msg "Unknown communication action: $action $command_name"
-		}
+		return [de1_ble_comm $action $command_name $data]
 	} elseif {$::de1(connectivity) == "tcp" || $::de1(connectivity) == "usb"} {
 		# TODO(REED) decide whether to move this into a TCP specific proc .. might actually not want to do this
 		# since fileio is I think the same... to wit
 		# USB TODO(REED) make sure usb works properly i.e. uses a fielhandle and not some weird serial comms at this stage
-		# TCP USB TODO(REED) check for writeability and/or catch errors
-		set current_handle $::de1_command_names_to_serial_handles($command_name)
+		# TCP +++ USB TODO(REED) check for writeability and/or catch errors
+		set command_handle $::de1_command_names_to_serial_handles($command_name)
 		if {$action == "read" || $action == "enable"} {
-			set serial_str "<+$current_handle>\n"
+			set serial_str "<+$command_handle>\n"
 			puts -nonewline $::de1(device_handle) $serial_str
 		} elseif {$action == "disable"} {
-			set serial_str "<-$current_handle>\n"
+			set serial_str "<-$command_handle>\n"
 			puts -nonewline $::de1(device_handle) $serial_str
 		} elseif {$action == "write"} {
 			set data_str [data_to_hex_string $data]
-			set serial_str "<$current_handle>$data_str\n"
+			set serial_str "<$command_handle>$data_str\n"
 			puts -nonewline $::de1(device_handle) $serial_str
 		} else {
 			msg "Unknown communication action: $action $command_name"

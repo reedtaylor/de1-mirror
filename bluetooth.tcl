@@ -1559,6 +1559,18 @@ proc later_new_de1_connection_setup_DEPRECATED_BY_COMMS {} {
 
 }
 
+proc de1_ble_comm {action command_name data} {
+	set current_cuuid $::de1_command_names_to_cuuids($command_name)
+	if {$action == "read" || $action == "enable" || $action == "disable"} {
+		return [ble $action $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $current_cuuid   $::cinstance($current_cuuid)]
+	} elseif {$action == "write"} {
+		return [ble $action $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $current_cuuid   $::cinstance($current_cuuid)   $data]
+	} else {
+		msg "Unknown communication action: $action $command_name"
+		return 0
+	}
+}
+
 proc de1_ble_handler { event data } {
 	#msg "de1 ble_handler '$event' $data"
 	#set ::de1(wrote) 0

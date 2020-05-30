@@ -1039,13 +1039,16 @@ proc de1_connected_state { {hide_delay 0} } {
 				return [translate "Disconnected"]
 			}
 			if {$::de1(connectivity) != "ble"} {
-				# not making an explicit call to de1_disconnecHandler for BLE because BLE disconnect events get
-				# handled inside the GATT and don't need to be triggered by this countdown
+				# we do NOT make an explicit timeout-based call to de1_disconnect_handler for BLE
+				# because BLE disconnect events get handled inside the GATT and don't need to
+				# be triggered by this countdown
+
 				msg "gui de1_connected_state reports de1 disconnect" 
-				# TODO(REED) this gets called repeatedly (1x/sec?) when the GUI is updating seconds.  so either
-				# here or inside the handler code we need to have some form of rate limiting.  I think there 
-				# may be variables to do this already
-				# TODO(REED) when disconnected things flip into GUI idle state awfully fast need to track down why
+				# * TODO(REED) this gets called repeatedly (1x/sec?) when the GUI is updating the elapsed seconds
+				# disconnected in the UI. So either here or inside the handler code we need to have some form
+				# of rate limiting.  
+				# I think there may be variables to do this already
+				# * TODO(REED) when disconnected things flip into GUI idle state awfully fast need to track down why
 				de1_disconnect_handler
 			}
 			return [subst {[translate "Disconnected"] : $since_last_ping}]

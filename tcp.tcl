@@ -40,26 +40,42 @@ proc tcp_connect_to_de1 {} {
 		set tcp_port "9090"
 	}
 
+	if {$::currently_connecting_de1_handle != 0} {
+		catch {
+			close $::currently_connecting_de1_handle
+		}
+		set ::currently_connecting_de1_handle 0
+	}
+
 	catch {
 		msg "initiating TCP connection to $tcp_host:$tcp_port"
-		set ::de1(device_handle) [socket -async $tcp_host $tcp_port]
+		set ::currently_connecting_de1_handle [socket -async $tcp_host $tcp_port]
 		set tcp_timeout_event [after 10000 tcp_timeout_handler]
 
 		# handle successful connection when this becomes writeable
-		fileevent $::de1(device_handle) writable [list tcp_connect_handler $tcp_timeout_event $tcp_host $tcp_port]
+		fileevent $::currently_connecting_de1_handle writable [list tcp_connect_handler $tcp_timeout_event $tcp_host $tcp_port]
 	}
 }
 
-# TODO(REED) - are we handling the no-connection-at-startup-time case correctly?  verify and fix
+# * TODO(REED) - are we handling the no-connection-at-startup-time case correctly?  verify and fix
 
 proc tcp_timeout_handler {} {
 	msg "TCP connection timeout"
+	catch {
+		close $::currently_connecting_de1_handle
+	}
+	set ::currently_connecting_de1_handle 0
 	after 500 de1_disconnect_handler
 }
 
 proc tcp_connect_handler {tcp_timeout_event tcp_host tcp_port} {
 	# cancel the timeout
 	after cancel $tcp_timeout_event
+
+	msg "tcp_connect_handler"
+
+	set ::de1(device_handle) $::currently_connecting_de1_handle
+	set ::currently_connecting_de1_handle 0
 
     # check connect success or fail
     set error [fconfigure $::de1(device_handle) -error]
@@ -80,7 +96,7 @@ proc tcp_connect_handler {tcp_timeout_event tcp_host tcp_port} {
 	}
 }
 
-
+# READABILITY TODO(REED) This funcion is more like "is_connected" and should probably be renamed
 proc tcp_de1_connected {} {
 	if {$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
 		if { [catch {

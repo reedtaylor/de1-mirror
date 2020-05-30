@@ -408,9 +408,9 @@ array set ::settings {
 	de1_tcp_host "de1"
 	de1_tcp_port "9090"
 }
-# TODO(REED) I feel liek the above preferred_connectivity is not wrtitten corrrectly 
-# to serve as a fallback for the settings file, like the latter is not read
-# at the time we determine comms.  Check and correct
+# * TODO(REED) I feel liek the above preferred_connectivity is not wrtitten corrrectly.  It is supposed
+# to serve as a fallback for the settings file, but it seems like maybe the settings file has not yet
+# been read from file, at the time we currently determine the comms type.  Check and correct
 
 if {[de1plus]} {
 	# default de1plus skin
