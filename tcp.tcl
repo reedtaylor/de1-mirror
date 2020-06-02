@@ -30,14 +30,14 @@ proc tcp_connect_to_de1 {} {
 
     set tcp_host [ifexists ::settings(de1_tcp_host)]
 	if {$tcp_host == ""} {
-		msg "Missing TCP hostname, using 'de1' as a fallback"
 		set tcp_host "de1"
+		msg "Missing TCP hostname, using $tcp_host as a fallback"
 	}
 
     set tcp_port [ifexists ::settings(de1_tcp_port)]
 	if {$tcp_port == ""} {
-		msg "Missing TCP port, using 9090 as a fallback"
 		set tcp_port "9090"
+		msg "Missing TCP port, using $tcp_port as a fallback"
 	}
 
 	if {$::currently_connecting_de1_handle != 0} {
