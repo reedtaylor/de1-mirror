@@ -1334,12 +1334,18 @@ proc bluetooth_connect_to_devices {} {
 
 	#@return
 	msg "bluetooth_connect_to_devices"
+	
+# REED to JOHN - I couldn't figure out what this specific 
+# situation was intended to capture, so it is currently commented
+# out ... might be that I handled whatever this was doing via other
+# means (establising a "connection" with the simulated DE1? maybe)
+#	if {$::android != 1} {
+#		ble_connect_to_de1
+#	}
 
-	if {$::de1(connectivity) == "ble"} {
-		ble_connect_to_de1
-	}
-
-	if {$::settings(bluetooth_address) != ""} {
+# TODO(REED) check original source cose to make sure this single consolidated statement is correct
+# (used to have a prior / simpler call to ble_connect_to_de1)
+	if {$::de1(connectivity) == "ble" && $::settings(bluetooth_address) != ""} {
 
 		if {[android_8_or_newer] == 1} {
 			# on bootpup, android 8 won't connect directly to a BLE device unless it's found by a scan
@@ -2506,6 +2512,7 @@ proc fast_write_open_DEPRECATED_BY_COMMS {fn parms} {
 
 # REED to JOHN: This code coule be migrated to de1_comms.tcl so as to repurpose the scanning_state to communicate about
 # e.g. TCP connectivity.  Leaving it for now
+# TCP TODO(REED)  "connecting" when disconnected ...this logic may neeed to be tweaked for non-BLE 
 proc scanning_state_text {} {
 	if {$::scanning == 1} {
 		return [translate "Searching"]
