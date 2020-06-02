@@ -1087,6 +1087,8 @@ proc de1_event_handler { command_name value } {
 			}
 		}
 	} elseif {$command_name == "Versions"} {
+		# TODO(REED) I think this is failing to happen for some reason during initial app startup.
+		# Need to figure out why.
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_version_desc $value arr2
