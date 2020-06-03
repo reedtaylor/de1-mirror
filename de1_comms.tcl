@@ -2,6 +2,7 @@
 package provide de1_comms 1.0
 
 package require de1_tcp 1.0
+package require de1_usb 1.0
 
 set ::failed_attempt_count_connecting_to_de1 0
 set ::successful_de1_connection_count 0
@@ -21,17 +22,15 @@ proc de1_real_machine {} {
 	return false
 }
 
-proc de1_real_machine_connected {} {
+proc de1_is_connected {} {
 	if {![de1_real_machine]} {
 		return false
 	}
 
 	if {$::de1(connectivity) == "ble"} {
-		return [ble_de1_connected]
-	} elseif {$::de1(connectivity) == "tcp"} {
-		return [tcp_de1_connected]
-	} elseif {$::de1(connectivity) == "usb"} {
-		# USB +++ TODO(REED) - usb connectivity check
+		return [de1_ble_is_connected]
+	} else {
+		return [de1_channel_is_connected]
 	}
 
 	return false
@@ -43,11 +42,7 @@ proc de1_real_machine_connected {} {
 # (As it stands the policy is "stuff is safe on any "real" machine that is currently thought 
 # to be connected.)
 proc de1_safe_for_firmware {} {
-	return [de1_real_machine_connected]
-}
-
-proc de1_safe_for_mmr {} {
-	return [de1_safe_for_firmware]
+	return [de1_is_connected]
 }
 
 proc de1_safe_for_calibration {} {
@@ -86,7 +81,7 @@ proc int_to_hex {in} {
 
 # calibration change notifications ENABLE
 proc de1_enable_calibration_notifications {} {
-	if {![de1_real_machine_connected] || ![de1_safe_for_calibration]} {
+	if {![de1_is_connected] || ![de1_safe_for_calibration]} {
 		msg "DE1 not connected, cannot send command 1"
 		return
 	}
@@ -96,7 +91,7 @@ proc de1_enable_calibration_notifications {} {
 
 # calibration change notifications DISABLE
 proc de1_disable_calibration_notifications {} {
-	if {![de1_real_machine_connected] || ![de1_safe_for_calibration]} {
+	if {![de1_is_connected] || ![de1_safe_for_calibration]} {
 		msg "DE1 not connected, cannot send command 2"
 		return
 	}
@@ -106,7 +101,7 @@ proc de1_disable_calibration_notifications {} {
 
 # temp changes
 proc de1_enable_temp_notifications {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 3"
 		return
 	}
@@ -119,7 +114,7 @@ proc de1_enable_temp_notifications {} {
 
 # status changes
 proc de1_enable_state_notifications {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 4"
 		return
 	}
@@ -128,7 +123,7 @@ proc de1_enable_state_notifications {} {
 }
 
 proc de1_disable_temp_notifications {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 5"
 		return
 	}
@@ -140,7 +135,7 @@ proc de1_disable_temp_notifications {} {
 }
 
 proc de1_disable_state_notifications {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 6"
 		return
 	}
@@ -149,14 +144,19 @@ proc de1_disable_state_notifications {} {
 }
 
 proc mmr_available {} {
-
-	if {$::de1(mmr_enabled) == 0} {
-		if {[de1_version_bleapi] > 3} {
-			# mmr feature became available at this version number
-			set ::de1(mmr_enabled) 1
-		} else {
-			msg "MMR is not enabled on this DE1 BLE API <4 #: [de1_version_bleapi]"
-		}
+	if {$::de1(connectivity) == "ble"} {
+		# when the BLE adaptor is in the loop, the app determines
+		# MMR-readiness using the BLE API version
+		return [ble_mmr_available]
+	} else {
+		# when the BLE adaptor is not in the loop, we don't currently
+		# get any response to the command that's equivalent to characteristic
+		# A001.  Right now just assume that a machine with DAYBREAK installed
+		# has sufficiently recent DE1 FW to be able to make mmr_available = true 
+		# REED to JOHN: This could be a safe or unsafe assumption.  If there's some
+		# other way to check for MMR-readiness (probing the FW somehow)
+		# this would be the place to do ti
+		set ::de1(mmr_enabled) 1
 	}
 	return $::de1(mmr_enabled)
 }
@@ -168,7 +168,7 @@ proc de1_enable_mmr_notifications {} {
 		return
 	}
 
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 7"
 		return
 	}
@@ -178,7 +178,7 @@ proc de1_enable_mmr_notifications {} {
 
 # water level notifications
 proc de1_enable_water_level_notifications {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		# REED to JOHN: 2 debug messages have "command 7" in them (MMR Read & Water Level).  
 		# Dunno if it matters much, but there it is.
 		msg "DE1 not connected, cannot send command 7"
@@ -189,7 +189,7 @@ proc de1_enable_water_level_notifications {} {
 }
 
 proc de1_disable_water_level_notifications {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 8"
 		return
 	}
@@ -199,7 +199,7 @@ proc de1_disable_water_level_notifications {} {
 
 # firmware update command notifications (not writing new fw, this is for erasing and switching firmware)
 proc de1_enable_maprequest_notifications {} {
-	if {![de1_real_machine_connected] || ![de1_safe_for_firmware]} {
+	if {![de1_is_connected] || ![de1_safe_for_firmware]} {
 		msg "DE1 not connected, cannot send command 9"
 		return
 	}
@@ -222,7 +222,7 @@ proc fwfile {} {
 }
 
 proc start_firmware_update {} {
-	if {![de1_real_machine_connected] || ![de1_safe_for_firmware]} {
+	if {![de1_is_connected] || ![de1_safe_for_firmware]} {
 		msg "DE1 not connected, cannot send command 10"
 		return
 	}
@@ -264,7 +264,7 @@ proc start_firmware_update {} {
 #
 # But, if my interpretation was wrong, we might lose an important safety check.
 # So anyway, this is one spot to *definitely* check my work.
-	if {[!de1_real_machine_connected]} {
+	if {[!de1_is_connected]} {
 		after 100 write_firmware_now
 		# bluetooth.tcl zeroed these BLE specific concepts out.  Not doing that here since "zeroing out a
 		# characteristic" is not an action that has a clear analog in TCP, USB etc.
@@ -305,7 +305,7 @@ proc firmware_upload_next {} {
 	
 	if {$::de1(connectivity)=="simulated"} {
 		msg "firmware_upload_next connected to 'simulated' machine; updating button text (only)"
-	} elseif {[de1_real_machine_connected] && [de1_safe_for_firmware]} {
+	} elseif {[de1_is_connected] && [de1_safe_for_firmware]} {
 		msg "firmware_upload_next $::de1(firmware_bytes_uploaded)"
 	} else {
 		msg "DE1 not connected, cannot send command 11"
@@ -369,7 +369,7 @@ proc mmr_read {address length} {
 		return
 	}
 
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send BLE command 11"
 		return
 	}
@@ -393,7 +393,7 @@ proc mmr_write {address length value} {
 		return
 	}
 
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send BLE command 11"
 		return
 	}
@@ -503,7 +503,7 @@ proc de1_cause_refill_now_if_level_low {} {
 }
 
 proc de1_send_waterlevel_settings {} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send BLE command 12"
 		return
 	}
@@ -529,7 +529,7 @@ proc run_next_userdata_cmd {} {
 		return
 	}
 
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "Do no write, DE1 not connected"
 		return
 	}
@@ -612,7 +612,7 @@ proc app_exit {} {
 }
 
 proc de1_send_state {comment msg} {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 13"
 		return
 	}
@@ -687,7 +687,7 @@ proc save_settings_to_de1 {} {
 
 proc de1_send_steam_hotwater_settings {} {
 
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 16"
 		return
 	}
@@ -701,7 +701,7 @@ proc de1_send_steam_hotwater_settings {} {
 }
 
 proc de1_send_calibration {calib_target reported measured {calibcmd 1} } {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 17"
 		return
 	}
@@ -732,7 +732,7 @@ proc de1_send_calibration {calib_target reported measured {calibcmd 1} } {
 }
 
 proc de1_read_calibration {calib_target {factory 0} } {
-	if {![de1_real_machine_connected]} {
+	if {![de1_is_connected]} {
 		msg "DE1 not connected, cannot send command 18"
 		return
 	}
@@ -856,7 +856,7 @@ proc connect_to_devices {} {
 	#   BLE devices to be connected (e.g. scale)
 	# - for the latter case (scales etc) we don't want a bunch of ble-specific complexity
 	#   in this file (e.g. determining which BLE connection approach to invoke, dependent
-	#   on android version.) seems safer & better architectured to leave that all in one 
+	#   on android version.) seems safer & better architecture to leave that all in one 
 	#   place, with "ble" in the filename)
 	bluetooth_connect_to_devices
 }
@@ -912,12 +912,40 @@ proc connect_to_de1 {} {
 		msg "connect_to_de1: initiating TCP connection"
 		return [tcp_connect_to_de1]
 	} elseif {$::de1(connectivity) == "usb"} {
-		# USB +++ TODO(REED) usb connect
+		msg "connect_to_de1: initiating USB connection"
+		return [usb_connect_to_de1]
 	} else {
 		msg "connect_to_de1: unexpected connectivity type"
 	}
 }
 
+# note the below is only used for non-BLE; ble has its own
+# means of handling connection timeouts etc.
+proc connection_timeout_handler {} {
+	msg "$::de1(connectivity) connection timeout"
+	catch {
+		close $::currently_connecting_de1_handle
+	}
+	set ::currently_connecting_de1_handle 0
+	after 500 de1_disconnect_handler
+}
+
+
+# READABILITY TODO(REED) This funcion is more like "is_connected" and should probably be renamed
+proc de1_channel_is_connected {} {
+	if {$::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
+		if { [catch {
+			if {[chan eof $::de1(device_handle)] || [chan pending input $::de1(device_handle)] == -1} {
+				msg "usb channel closed"
+				de1_disconnect_handler
+				return 0
+			} 
+		} ] } {return 0} 
+	} else {
+		return 0
+	}
+	return 1
+}
 
 # USABILITY TCP USB TODO(REED) we could move this code from the bluetooth.tcl implememtation, to more generically
 # show a "connection list" instead of a "bluetooth list".  So for example a TCP host:port could be shown
@@ -946,7 +974,7 @@ proc close_de1 {} {
 		} elseif {$::de1(connectivity) == "tcp"} {
 			tcp_close_de1
 		} elseif {$::de1(connectivity) == "usb"} {
-			# USB +++ TODO(REED) usb_close_de1
+			usb_close_de1
 		}
 	}
 	set ::de1(device_handle) 0
@@ -1087,8 +1115,11 @@ proc de1_event_handler { command_name value } {
 			}
 		}
 	} elseif {$command_name == "Versions"} {
-		# TODO(REED) I think this is failing to happen for some reason during initial app startup.
-		# Need to figure out why.
+		# REED to JOHN: On BLE this command corresponds to characteristic A001.
+		# Looking at logs it seems that characteristic is handled entirely on the BLE adaptor, meaning the 
+		# DE1 serial UART isn't involved.  As such when the app uses DAYBREAK (non BLE) to send "<+A>" this isn't currently 
+		# eliciting any response from the DE1.
+		# There may be a smarter way to handle this -- see also proc mmr_available
 		set ::de1(last_ping) [clock seconds]
 		#update_de1_state $value
 		parse_binary_version_desc $value arr2
@@ -1220,6 +1251,31 @@ proc de1_event_handler { command_name value } {
 	}
 }
 
+proc channel_read_handler {channel} {
+	if { [catch {set inString [gets $channel]} ] || ![de1_is_connected]} {
+		msg "failure during channel read - handling disconnect"
+		de1_disconnect_handler
+		return
+	}
+
+	# TODO(REED) maybe check for chan blocking
+
+	if {![regexp -nocase {^\[[A-R]\]([0-9A-F][0-9A-F])+$} $inString]} {
+		msg "Dropping invalid message: $inString"
+		return
+	}
+
+    set serial_handle [string index $inString 1]
+    set inHexStr [string range $inString 3 end]
+    set inHex [binary format H* $inHexStr]
+
+    msg [format "DE1 sent: %s %s" $serial_handle $inHexStr]
+
+	set command_name $::de1_serial_handles_to_command_names($serial_handle)
+    de1_event_handler $command_name $inHex
+}
+
+
 proc calibration_received {value} {
 
     #calibration_ble_received $value
@@ -1303,10 +1359,7 @@ proc de1_comm {action command_name {data 0}} {
 	if {$::de1(connectivity) == "ble"} {
 		return [de1_ble_comm $action $command_name $data]
 	} elseif {$::de1(connectivity) == "tcp" || $::de1(connectivity) == "usb"} {
-		# TODO(REED) decide whether to move this into a TCP specific proc .. might actually not want to do this
-		# since fileio is I think the same... to wit
-		# USB TODO(REED) make sure usb works properly i.e. uses a fielhandle and not some weird serial comms at this stage
-		# TCP +++ USB TODO(REED) check for writeability and/or catch errors
+		# TODO(REED) check for writeability and/or catch errors
 		set command_handle $::de1_command_names_to_serial_handles($command_name)
 		if {$action == "read" || $action == "enable"} {
 			set serial_str "<+$command_handle>\n"

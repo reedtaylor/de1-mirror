@@ -1,30 +1,5 @@
 package provide de1_tcp 1.0
 
-
-proc tcp_read_handler {sock} {
-	if { [catch {set inString [gets $sock]} ] || ![tcp_de1_connected]} {
-		msg "failure during TCP socket read - handling disconnect"
-		de1_disconnect_handler
-		return
-	}
-
-	# TODO(REED) maybe check for chan blocking
-
-	if {![regexp -nocase {^\[[A-R]\]([0-9A-F][0-9A-F])+$} $inString]} {
-		msg "Dropping invalid message: $inString"
-		return
-	}
-
-    set serial_handle [string index $inString 1]
-    set inHexStr [string range $inString 3 end]
-    set inHex [binary format H* $inHexStr]
-
-    msg [format "TCP: %s %s" $serial_handle $inHexStr]
-
-	set command_name $::de1_serial_handles_to_command_names($serial_handle)
-    de1_event_handler $command_name $inHex
-}
-
 proc tcp_connect_to_de1 {} {
 	msg "tcp_connect_to_de1"
 
@@ -50,22 +25,11 @@ proc tcp_connect_to_de1 {} {
 	catch {
 		msg "initiating TCP connection to $tcp_host:$tcp_port"
 		set ::currently_connecting_de1_handle [socket -async $tcp_host $tcp_port]
-		set tcp_timeout_event [after 10000 tcp_timeout_handler]
+		set tcp_timeout_event [after 10000 connection_timeout_handler]
 
 		# handle successful connection when this becomes writeable
 		fileevent $::currently_connecting_de1_handle writable [list tcp_connect_handler $tcp_timeout_event $tcp_host $tcp_port]
 	}
-}
-
-# * TODO(REED) - are we handling the no-connection-at-startup-time case correctly?  verify and fix
-
-proc tcp_timeout_handler {} {
-	msg "TCP connection timeout"
-	catch {
-		close $::currently_connecting_de1_handle
-	}
-	set ::currently_connecting_de1_handle 0
-	after 500 de1_disconnect_handler
 }
 
 proc tcp_connect_handler {tcp_timeout_event tcp_host tcp_port} {
@@ -88,7 +52,7 @@ proc tcp_connect_handler {tcp_timeout_event tcp_host tcp_port} {
 	    fileevent $::de1(device_handle) writable ""
 
 		# install readable event handler
-		fileevent $::de1(device_handle) readable [list tcp_read_handler $::de1(device_handle)]
+		fileevent $::de1(device_handle) readable [list channel_read_handler $::de1(device_handle)]
 		chan configure $::de1(device_handle) -buffering line
 		chan configure $::de1(device_handle) -blocking 0
 

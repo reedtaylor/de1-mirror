@@ -8,5 +8,6 @@ package ifneeded de1_creatormain 1.0 [list source [file join "./" creatormain.tc
 package ifneeded de1_machine 1.0 [list source [file join "./" machine.tcl]]
 package ifneeded de1_comms 1.0 [list source [file join "./" de1_comms.tcl]]
 package ifneeded de1_tcp 1.0 [list source [file join "./" tcp.tcl]]
+package ifneeded de1_usb 1.0 [list source [file join "./" usb.tcl]]
 package ifneeded de1_misc 1.0 [list source [file join "./" misc.tcl]]
 package ifneeded de1_updater 1.0 [list source [file join "./" updater.tcl]]
