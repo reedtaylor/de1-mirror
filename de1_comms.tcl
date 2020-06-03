@@ -397,7 +397,7 @@ proc mmr_write {address length value} {
 		msg "DE1 not connected, cannot send BLE command 11"
 		return
 	}
-	userdata_append "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]" [list de1comm write WriteToMMR $data]
+	userdata_append "MMR writing [convert_string_to_hex $mmrlen] bytes of firmware data to [convert_string_to_hex $mmrloc] with value [convert_string_to_hex $mmrval] : with comment [convert_string_to_hex $data]" [list de1_comm write WriteToMMR $data]
 }
 
 proc set_tank_temperature_threshold {temp} {
