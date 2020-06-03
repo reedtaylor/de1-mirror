@@ -1788,6 +1788,8 @@ proc ui_startup {} {
 	delay_screen_saver
 	change_screen_saver_img
 
+	check_if_battery_low_and_give_message
+
 	# check for app updates, a half day after startup, and then every 24h thereafter
 	#after 43200000 scheduled_app_update_check
 	after 3000 scheduled_app_update_check
@@ -2489,6 +2491,10 @@ proc handle_keypress {keycode} {
 	} elseif {($::some_droid != 1 && $keycode == 119) || ($::some_droid == 1 && $keycode == 26)} {
 		# w = water
 		start_water
+
+	} elseif {($::some_droid != 1 && $keycode == 112) || ($::some_droid == 1 && $keycode == 19)} {
+		# w = water
+		start_sleep
 
 	} elseif {($::some_droid != 1 && $keycode == 50) || ($::some_droid == 1 && $keycode == 31)} {
 		# ctrl-e = espresso or 2 on android

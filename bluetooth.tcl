@@ -2041,13 +2041,6 @@ proc de1_ble_handler { event data } {
 ###							#msg "Confirmed a00e read from DE1: '[remove_null_terminator $value]'"
 ###							set ::de1(wrote) 0
 ###							run_next_userdata_cmd
-###
-### REED to JOHN: did *NOT* move to comms because this is dead code -- this exact characteristic is already handled "above" 
-### and so I did not port this code over, instead I am just commenting it out
-###						} elseif {$cuuid == "0000A00F-0000-1000-8000-00805F9B34FB"} {
-###							msg "error"
-###							#update_de1_state $value
-###							#msg "Confirmed a00f read from DE1: '[remove_null_terminator $value]'"
 ###						}
 
 ### Non-DE1 BLE characteristics start here (e.g. scales), so did not move to de1_comms.tcl
@@ -2208,7 +2201,7 @@ proc de1_ble_handler { event data } {
 									# > after you hit the stop button, the remaining liquid that will end up in the cup is equal to about 2.6 seconds of the current flow rate, minus a 0.4 g adjustment
 								    set lag_time_calibration [expr {$::de1(scale_weight_rate) * $::settings(stop_weight_before_seconds) }]
 
-								    msg "lag_time_calibration: $lag_time_calibration | target_shot_weight: $target_shot_weight | thisweight: $thisweight | scale_autostop_triggered: $::de1(scale_autostop_triggered) | timer: [espresso_timer]"
+								    #msg "lag_time_calibration: $lag_time_calibration | target_shot_weight: $target_shot_weight | thisweight: $thisweight | scale_autostop_triggered: $::de1(scale_autostop_triggered) | timer: [espresso_timer]"
 
 									if {$::de1(scale_autostop_triggered) == 0 && [round_to_one_digits $thisweight] > [round_to_one_digits [expr {$target_shot_weight - $lag_time_calibration}]]} {	
 

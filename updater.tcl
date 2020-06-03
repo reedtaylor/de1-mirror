@@ -194,6 +194,7 @@ proc decent_http_get_to_file {url fn {timeout 30000}} {
 
 proc read_file {filename} {
     set data ""
+
     set errcode [catch {
         set fn [open $filename]
             fconfigure $fn -translation binary
@@ -207,6 +208,13 @@ proc read_file {filename} {
         catch {
             msg "read_file $::errorInfo"
         }
+    }
+
+    if {$data == ""} {
+        catch {
+            msg "read_file: '$filename' exists [file exists $filename] - length [file size $filename]"
+        }
+
     }
     return $data
 }
@@ -222,6 +230,8 @@ proc homedir {} {
 
 
 proc de1plus {} {
+    # all machines are DE1+ now
+    return 1
     #puts "x: [package present de1plus 1.0]"
     set x 0
     catch {
@@ -425,10 +435,11 @@ proc start_app_update {} {
         set host "http://decentespresso.com"
     }
 
-    set progname "de1"
-    if {[de1plus] == 1} {
-        set progname "de1plus"
-    }
+    set progname "de1plus"
+    #set progname "de1"
+    #if {[de1plus] == 1} {
+    #    set progname "de1plus"
+    #}
 
     
     set remote_timestamp [check_timestamp_for_app_update_available 1]
@@ -437,38 +448,16 @@ proc start_app_update {} {
     ##############################################################################################################
     # get manifest both as raw TXT and as gzip compressed, to detect tampering 
     #set url_manifest "$host/download/sync/$progname/manifest.txt"
-    set url_manifest "$host/download/sync/$progname/manifest.tdb"
-
-    catch {
-        msg "Fetching manifest: $url_manifest"
-    }
-
-    set remote_manifest {}
-    catch {
-        set remote_manifest [string trim [decent_http_get $url_manifest]]
-
-    }
-
-    set remote_manifest_length 0
-    set remote_manifest_parts_length -1
-    catch {
-        set remote_manifest_length [llength $remote_manifest]
-        set remote_manifest_parts_length [expr {$remote_manifest_length % 4}]
-    }
-    catch {
-        msg "Length of remote manifest: $remote_manifest_length % $remote_manifest_parts_length"
-    }
-
     set url_manifest_gz "$host2/download/sync/$progname/manifest.gz"
     set remote_manifest_gz {}
     catch {
         set remote_manifest_gz [decent_http_get $url_manifest_gz]
-        set remote_manifest_gunzip [zlib gunzip $remote_manifest_gz]
+        set remote_manifest [zlib gunzip $remote_manifest_gz]
     }
     set remote_manifest_gunzip_length 0
     set remote_manifest_gunzip_parts_length -1
     catch {
-        set remote_manifest_gunzip_length [llength $remote_manifest_gunzip]
+        set remote_manifest_gunzip_length [llength $remote_manifest]
         set remote_manifest_gunzip_parts_length [expr {$remote_manifest_gunzip_length % 4}]
     }
 
@@ -480,25 +469,33 @@ proc start_app_update {} {
     set errcode [catch {
         foreach {filename filesize filemtime filesha} $remote_manifest {}
     }]
-    if {$errcode != 0} {
-        msg "Corrupt manifest.tdb - using gzipped version instead"
-        set remote_manifest_length ""
-    }
+    if {$errcode != 0 || $remote_manifest == "" || $remote_manifest_gunzip_parts_length != 0} {
+        msg "Corrupt manifest: '[string range $remote_manifest 0 500]'"
+        set ::de1(app_update_button_label) [translate "Update failed"]; 
 
-    # if the text file is corrupted (doesn't have a x4 part structure) but the .gz file is fine, use that
-    if {($remote_manifest_length == 0 || $remote_manifest_parts_length != 0) && ($remote_manifest_gunzip_length > 100 && $remote_manifest_gunzip_parts_length == 0)} {
         catch {
-            msg "Remote plain text manifest.txt is corrupted, using gzipped version"
+            .hello configure -text $::de1(app_update_button_label)
         }
-        set remote_manifest $remote_manifest_gunzip
+
+        set ::app_updating 0
+        return $::de1(app_update_button_label)
     }
     ##############################################################################################################
 
 
-    set local_manifest [string trim [read_file "[homedir]/manifest.txt"]]
+    set local_manifest [string trim [read_binary_file "[homedir]/manifest.txt"]]
 
     catch {
-        msg "Local manifest has [string length $local_manifest] bytes"
+        msg "Local [homedir]/manifest.txt has [string length $local_manifest] bytes - [file exists "[homedir]/manifest.txt"]"
+    }
+
+    if {[string length $local_manifest] == 0} {
+        set local_manifest [string trim [read_binary_file "[homedir]/manifest.tdb"]]
+
+        catch {
+            msg "Now using manifest.tdb file.  Local [homedir]/manifest.tdb has [string length $local_manifest] bytes"
+        }
+
     }
 
     # load the local manifest into memory
@@ -738,7 +735,7 @@ proc read_binary_file {filename} {
     set err {}
     set error [catch {set fn [open $filename]} err]
     if {$fn == ""} {
-        #puts "error opening binary file: $filename / '$err' / '$error' / $fn"
+        msg "error opening binary file: $filename / '$err' / '$error' / $fn"
         return ""
     }
     if {$fn == ""} {
