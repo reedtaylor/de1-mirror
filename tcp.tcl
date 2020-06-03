@@ -53,6 +53,7 @@ proc tcp_connect_handler {tcp_timeout_event tcp_host tcp_port} {
 
 		# install readable event handler
 		fileevent $::de1(device_handle) readable [list channel_read_handler $::de1(device_handle)]
+		chan configure $::de1(device_handle) -translation {auto lf}
 		chan configure $::de1(device_handle) -buffering line
 		chan configure $::de1(device_handle) -blocking 0
 

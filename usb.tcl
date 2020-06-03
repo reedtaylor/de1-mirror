@@ -18,6 +18,9 @@ proc usb_connect_to_de1 {} {
 
 	catch {
 		msg "initiating USB connection to $usb_path"
+# TODO(REED) I think the following is what's needed for OTG - also will need to wrap it in 
+# {$::de1(connectivity) == "otg"} type clauses in a number of places in the code.
+
 #		set ::currently_connecting_de1_handle [usbserial $usb_path]
 		set ::currently_connecting_de1_handle [open $usb_path r+]
 	}
@@ -39,6 +42,7 @@ proc usb_connect_handler {usb_path} {
 	# install readable event handler
 	fileevent $::de1(device_handle) readable [list channel_read_handler $::de1(device_handle)]
 	fconfigure $::de1(device_handle) -mode 115200,n,8,1
+	chan configure $::de1(device_handle) -translation {auto lf}
 	chan configure $::de1(device_handle) -buffering line
 	chan configure $::de1(device_handle) -blocking 0
 
