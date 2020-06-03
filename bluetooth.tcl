@@ -502,7 +502,7 @@ proc de1_disable_state_notifications_DEPRECATED_BY_COMMS {} {
 	userdata_append "disable state notifications" [list ble disable $::de1(device_handle) $::de1(suuid) $::sinstance($::de1(suuid)) $::de1(cuuid_0E) $::cinstance($::de1(cuuid_0E))]
 }
 
-proc mmr_available_DEPRECATED_BY_COMMS {} {
+proc ble_mmr_available {} {
 
 	if {$::de1(mmr_enabled) == 0} {
 		if {[de1_version_bleapi] > 3} {
@@ -1431,7 +1431,7 @@ proc ble_connect_to_de1 {} {
     
 }
 
-proc ble_de1_connected {} {
+proc de1_ble_is_connected {} {
 	if {[ifexists ::sinstance($::de1(suuid))] != "" && $::de1(device_handle) != "0" && $::de1(device_handle) != "1"} {
 		return true
 	}
