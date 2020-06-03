@@ -424,6 +424,9 @@ proc determine_de1_connectivity {} {
         set ::de1(connectivity) "tcp"
     } elseif {[ifexists ::settings(de1_preferred_connectivity)] == "usb"} {
         set ::de1(connectivity) "usb"
+		if {$::runtime == "android"} {
+			msg "OTG inventory: [usbserial]"
+		}
 	} elseif {[ifexists ::settings(de1_preferred_connectivity)] == "ble" && $::runtime == "android"} {
 		set ::de1(connectivity) "ble"
     } else {

@@ -18,11 +18,14 @@ proc usb_connect_to_de1 {} {
 
 	catch {
 		msg "initiating USB connection to $usb_path"
-# TODO(REED) I think the following is what's needed for OTG - also will need to wrap it in 
-# {$::de1(connectivity) == "otg"} type clauses in a number of places in the code.
 
-#		set ::currently_connecting_de1_handle [usbserial $usb_path]
-		set ::currently_connecting_de1_handle [open $usb_path r+]
+		if {$::runtime == "android"} {
+			# assume OTG
+			set ::currently_connecting_de1_handle [usbserial $usb_path]
+		} else {
+			# assume non OTG
+			set ::currently_connecting_de1_handle [open $usb_path r+]
+		}
 	}
 
 	if {$::currently_connecting_de1_handle > 0} {
