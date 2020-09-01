@@ -27,9 +27,10 @@ color_stage_1 {#c8e7d5}
 color_stage_2 {#efdec2}
 color_stage_3 {#edceca}
 current_frame_description {}
-de1_preferred_connectivity tcp
+de1_preferred_connectivity ble
 de1_tcp_host de1
 de1_tcp_port 9090
+de1_usb_path /dev/cu.SLAB_USBtoUART
 debuglog_window_size 35
 default_font_calibration 0.5
 disable_long_press 0

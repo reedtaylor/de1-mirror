@@ -404,7 +404,7 @@ array set ::settings {
 	preheat_temperature 95
 	water_volume 50
     ghc_is_installed 0
-	de1_preferred_connectivity "usb"
+	de1_preferred_connectivity "ble"
 	de1_usb_path "/dev/cu.SLAB_USBtoUART"
 	de1_tcp_host "de1"
 	de1_tcp_port "9090"
